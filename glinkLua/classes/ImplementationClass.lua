@@ -1,4 +1,4 @@
-local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
+--local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
 
 local ImplementationClass = {}
 

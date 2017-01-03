@@ -1,8 +1,8 @@
 local GlinkGlobal = {}
 
-local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
-local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
-local ModuleLibrary = dofile(__directory .. "/classes/ModuleLibrary.lua")
+--local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
+--local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
+--local ModuleLibrary = dofile(__directory .. "/classes/ModuleLibrary.lua")
 
 GlinkGlobal.globalModuleLibrary = nil
 

@@ -1,3 +1,5 @@
+local pathops = dofile(__directory .. "/lib/pathops.lua")
+
 function table.val_to_str ( v )
 	if "string" == type( v ) then
 	v = string.gsub( v, "\n", "\\n" )
@@ -92,8 +94,8 @@ function recursiveMkdir(dir)
 		local parentdir = pathops.dirname(dir);
 		if (not lfs.attributes(parentdir)) then f(parentdir) end
 
-		print("MKDIR\t" .. pathops.resolve(process.env.PWD, dir));
-		fs.mkdirSync(dir);
+		print("MKDIR\t" .. pathops.resolve(os.getenv("PWD"), dir))
+		lfs.mkdir(dir);
 	end
 	f(dir);
 end

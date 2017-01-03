@@ -1,8 +1,8 @@
 local text = dofile(__directory .. "/lib/text.lua")
 
-local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
-local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
-local VariantModuleClass = dofile(__directory .. "/classes/VariantModuleClass.lua")
+--local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
+--local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
+--local VariantModuleClass = dofile(__directory .. "/classes/VariantModuleClass.lua")
 
 local ModuleLibrary = {}
 ModuleLibrary.__index = ModuleLibrary
@@ -67,10 +67,10 @@ function ModuleLibrary:printInfo(name)
 	if (mod == nil) then 
 		print(text.red(name) .. " is undefined module") 
 	else 
-		if (mod.type == "simple") then
+		if (getmetatable(mod) == ModuleClass) then
 			print(text.yellow(name) .. " is simple module")	
 		else 
-			if (mod.type == "variant") then
+			if (getmetatable(mod) == VariantModuleClass) then
 				print(text.yellow(name) .. " is variant module. Defined implementations:")
 				for k, v in pairs(mod.implementations) do
 					print(k)
@@ -112,12 +112,12 @@ function ModuleLibrary:getRealModuleRecord(name,impl)
 	local mod = self:getModuleRecord(name);
 	
 	local ret;
-	if (mod.type == "simple") then
+	if (getmetatable(mod) == ModuleClass) then
 		if (impl) then error "This module dont have implementations" end
 		return mod;
 	end
 
-	if (mod.type == "variant") then
+	if (getmetatable(mod) == VariantModuleClass) then
 		if (impl == nil) then error "This module need to implementation" end
 		ret = mod:getImplementation(impl);
 		if (ret == nil) then error "Implementation is not released" end

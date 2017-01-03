@@ -1,7 +1,7 @@
 local text = dofile(__directory .. "/lib/text.lua")
 local pathops = dofile(__directory .. "/lib/pathops.lua")
 local ruleops = dofile(__directory .. "/lib/ruleops.lua")
-local FileCache = dofile(__directory .. "/classes/FileCache.lua")
+--local FileCache = dofile(__directory .. "/classes/FileCache.lua")
 
 --local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
 --local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
