@@ -370,7 +370,7 @@ function CXXModuleCompiler:checkModuleArrayDepends (modarray)
 		if (not table.contains(nams, dep.dep)) then
 			print(text.red("Unresolved depend:") .. text.yellow(dep.mod.name) 
 				.. " needs " .. text.yellow(dep.dep));
-			self.mlib.printInfo(dep.dep);
+			self.mlib:printInfo(dep.dep);
 			os.exit(1);
 		end
 	end
@@ -514,6 +514,32 @@ function CXXModuleCompiler:objectUpdate (path, deprule, objrule, modmtime, weak)
 	return objectfile.path;
 end
 
+function CXXModuleCompiler:objectTask (path, deprule, objrule, modmtime, weak)
+	local sourcefile = self.fileCache:getFile(path);
+	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
+	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
+
+	local task = {
+		sourcefile = sourcefile,
+		objectfile = objectfile,
+		dependfile = dependfile,
+		
+		objrule = ruleops.substitute(objrule, {
+			src = sourcefile.path,
+			tgt = objectfile.path
+		}),
+	
+		deprule = ruleops.substitute(deprule, {
+			src = sourcefile.path,
+			tgt = dependfile.path
+		}),
+
+		needRecompile = self:needToRecompile(objectfile, dependfile, modmtime, weak),		
+	}
+
+	return task;
+end
+
 function CXXModuleCompiler:__updateModObjects(mod) 
 	assert(mod)
 	local weak = mod.__opts.weakRecompile  
@@ -547,7 +573,7 @@ end
 --Main executable assemle method
 --@name - name of assembled module
 --@addopts - module's added options*/
-function CXXModuleCompiler:assembleModule (name, addopts)
+function CXXModuleCompiler:assembleModuleStraight (name, addopts)
 	--Get module from library.
 	local mod = self.mlib:getModule(name)
 
@@ -576,6 +602,128 @@ function CXXModuleCompiler:assembleModule (name, addopts)
 
 	--If nothing to do, return false.
 	return ret;
+end
+
+function CXXModuleCompiler:objectTasks(mod)
+	local weak = mod.__opts.weakRecompile  
+	local sources = mod:getSources()
+	local objects = {}
+
+	if sources.s then
+		for i = 1, #sources.s do
+			objects[#objects + 1] = self:objectTask(sources.s[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak)
+		end
+	end
+
+	if sources.cc then
+		for i = 1, #sources.cc do
+			objects[#objects + 1] = self:objectTask(sources.cc[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak)
+		end
+	end
+
+	if sources.cxx then
+		for i = 1, #sources.cxx do
+			objects[#objects + 1] = self:objectTask(sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak)
+		end
+	end
+
+	return objects;
+end
+
+function CXXModuleCompiler:assembleModuleParallel (name, addopts)
+	--Get module from library.
+	local mod = self.mlib:getModule(name)
+
+	--Main prepare operation.
+	--In this operation we restore and resolve opts structs.
+	--Function returns module array, that ready to compile operation.*/
+	local modarray = self:prepareModuleArray(mod, addopts)
+	
+	--//Check depends of modules.
+	self:checkModuleArrayDepends(modarray);
+	self:checkModuleArrayOptions(modarray);
+
+	--Compile operation.
+	local tasks = {}
+	for i = 1, #modarray do
+		local mod = modarray[i]
+		local modtasks = self:objectTasks(mod)
+		tasks = table.arrayConcat(tasks, modtasks);
+	end
+
+	local sources = {}	
+	local updated = {}	
+
+
+	for i = 1, #tasks do
+		local file = tasks[i].sourcefile.path
+		sources[#sources + 1] = file
+		if tasks[i].needRecompile then
+			updated[#updated + 1] = file
+			print("PARALLEL_OBJECT", file)
+		end
+	end
+
+	print("Parallel Assemble. files:", #updated)
+
+	local objects = {}
+	local tpipes = {}
+	local assemble = true
+	for i = 1, #tasks do
+		local task = tasks[i]
+		objects[#objects + 1] = task.objectfile.path
+		if task.needRecompile then
+			--print("PARALLEL_OBJECT", task.sourcefile.path)
+			local pipe = assert(io.popen(task.objrule, 'r'))
+			tpipes[#tpipes + 1] = {
+				pipe = pipe,
+				task = task,
+			}
+		end
+	end
+
+	for i = 1, #tpipes do
+		local status = tpipes[i].pipe:close()
+		tpipes[i].status = status
+		self.fileCache:updateFile(tpipes[i].task.objectfile.path);
+	end
+
+	for i = 1, #tpipes do
+		if tpipes[i].status then 
+			--print("PARALLEL_DEPEND", tpipes[i].task.sourcefile.path)
+			local pipe = assert(io.popen(tpipes[i].task.deprule, 'r'))
+			tpipes[i].pipe = pipe
+		else
+			print(text.red("Parallel assemble error"), tpipes[i].task.sourcefile.path)
+			assemble = false
+		end
+	end
+
+	for i = 1, #tpipes do
+		if tpipes[i].status == true then 
+			local status = tpipes[i].pipe:close()
+			tpipes[i].depstatus = status
+			self.fileCache:updateFile(tpipes[i].task.dependfile.path);
+		end
+	end
+
+	if assemble == false then os.exit(1) end
+
+	local ret
+	if (objects[1]) then
+		ret = self:__assembleObjects(mod, objects);
+	end
+
+	return ret;
+end
+
+
+function CXXModuleCompiler:assembleModule (name, addopts)
+	if self.parallel == true then
+		return self:assembleModuleParallel(name,addopts)
+	else
+		return self:assembleModuleStraight(name,addopts)
+	end
 end
 
 return CXXModuleCompiler
