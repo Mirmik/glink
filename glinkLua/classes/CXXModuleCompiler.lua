@@ -478,6 +478,7 @@ function CXXModuleCompiler:objectCreate(sourcefile, objectfile, dependfile, rule
 end
 
 function CXXModuleCompiler:needToRecompile(objfile, depfile, modmtime, weak)
+	if self.rebuild then return true end
 	if objfile.exists == false then return true end 
 	if depfile.exists == false then return true end 
 	if weak == "norecompile" then return false end
