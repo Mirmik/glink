@@ -1,3 +1,5 @@
+glinkLib = require("glinkLib")
+
 local text = dofile(__directory .. "/lib/text.lua")
 local pathops = dofile(__directory .. "/lib/pathops.lua")
 local ruleops = dofile(__directory .. "/lib/ruleops.lua")
@@ -40,8 +42,8 @@ function CXXModuleCompiler:new(args)
 		cc_dep_rule = "%CC% -MM %src% > %tgt% %__options__%",
 		s_dep_rule = "%CC% -MM %src% > %tgt% %__options__%",
 		ld_rule = "%CXX% %objs% -o %tgt% %__options__%",
-		__options__ = "%STANDART% %OPTIMIZATION% %DEFINES% %INCLUDE% %LIBS% %OPTIONS%",
-		__link_options__ = "%OPTIMIZATION% %LIBS% %LDSCRIPTS% %OPTIONS%",
+		__options__ = "%STANDART% %OPTIMIZATION% %DEFINES% %INCLUDE% %OPTIONS%",
+		__link_options__ = "%OPTIMIZATION% %LIBS% %SHARED% %LDSCRIPTS% %OPTIONS%",
 	}, args.buildutils);
 
 	--We use global context as default.
@@ -101,6 +103,7 @@ end
 function CXXModuleCompiler:restoreOpts(opts, basedir) 
 	opts.includePaths = __helper_stringToArray(opts.includePaths)
 	opts.ldscripts = __helper_stringToArray(opts.ldscripts)
+	opts.libs = __helper_stringToArray(opts.libs)
 	opts.defines = __helper_stringToArray(opts.defines)
 
 	if (opts.options) then
@@ -178,7 +181,6 @@ function CXXModuleCompiler:resolveODRule(protorules, opts)
 
 	local tempoptions = ruleops.substitute(protorules.__options__, {
 		OPTIMIZATION = opts.optimization,
-		LIBS = table.concat(opts.libs," "),
 		DEFINES = table.concat(opts.defines," "),
 		INCLUDE = table.concat(
 			util.map(opts.includePaths, function(file) return "-I" .. file end), 
@@ -210,12 +212,14 @@ function CXXModuleCompiler:resolveLinkRule(protorules, opts)
 
 	local tempoptions = ruleops.substitute(protorules.__link_options__, {
 		OPTIMIZATION = opts.optimization,
-		LIBS = table.concat(opts.libs," "),
+		LIBS = table.concat(util.map(opts.libs, function(file) return "-l" .. file end), 
+			" "),
 		LDSCRIPTS = table.concat(
 			util.map(opts.ldscripts, function(file) return "-T" .. file end), 
 			" "
 		),
 		OPTIONS = table.concat(opts.options.ld," "),
+		SHARED = opts.sharedLibrary and "-shared" or ""
 	})
 	
 	local ret = {};
@@ -515,32 +519,6 @@ function CXXModuleCompiler:objectUpdate (path, deprule, objrule, modmtime, weak)
 	return objectfile.path;
 end
 
-function CXXModuleCompiler:objectTask (path, deprule, objrule, modmtime, weak)
-	local sourcefile = self.fileCache:getFile(path);
-	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
-	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
-
-	local task = {
-		sourcefile = sourcefile,
-		objectfile = objectfile,
-		dependfile = dependfile,
-		
-		objrule = ruleops.substitute(objrule, {
-			src = sourcefile.path,
-			tgt = objectfile.path
-		}),
-	
-		deprule = ruleops.substitute(deprule, {
-			src = sourcefile.path,
-			tgt = dependfile.path
-		}),
-
-		needRecompile = self:needToRecompile(objectfile, dependfile, modmtime, weak),		
-	}
-
-	return task;
-end
-
 function CXXModuleCompiler:__updateModObjects(mod) 
 	assert(mod)
 	local weak = mod.__opts.weakRecompile  
@@ -605,6 +583,32 @@ function CXXModuleCompiler:assembleModuleStraight (name, addopts)
 	return ret;
 end
 
+function CXXModuleCompiler:objectTask (path, deprule, objrule, modmtime, weak)
+	local sourcefile = self.fileCache:getFile(path);
+	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
+	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
+
+	local task = {
+		sourcefile = sourcefile,
+		objectfile = objectfile,
+		dependfile = dependfile,
+		
+		objrule = ruleops.substitute(objrule, {
+			src = sourcefile.path,
+			tgt = objectfile.path
+		}),
+	
+		deprule = ruleops.substitute(deprule, {
+			src = sourcefile.path,
+			tgt = dependfile.path
+		}),
+
+		needRecompile = self:needToRecompile(objectfile, dependfile, modmtime, weak),		
+	}
+
+	return task;
+end
+
 function CXXModuleCompiler:objectTasks(mod)
 	local weak = mod.__opts.weakRecompile  
 	local sources = mod:getSources()
@@ -631,6 +635,24 @@ function CXXModuleCompiler:objectTasks(mod)
 	return objects;
 end
 
+function CXXModuleCompiler:prepareLibTasks(tasks)
+	local result = {}
+	for key, task in ipairs(tasks) do
+		if task.needRecompile then
+			result[#result + 1] = {
+				rule = task.objrule,
+				message = "OBJECT " .. task.sourcefile.path,
+				next = {
+					rule = task.deprule,
+					message = nil,
+					next = nil
+				}
+			}
+		end
+	end
+	return result
+end
+
 function CXXModuleCompiler:assembleModuleParallel (name, addopts)
 	--Get module from library.
 	local mod = self.mlib:getModule(name)
@@ -653,62 +675,30 @@ function CXXModuleCompiler:assembleModuleParallel (name, addopts)
 	end
 
 	local sources = {}	
+	local objects = {}	
 	local updated = {}	
 
 
 	for i = 1, #tasks do
 		local file = tasks[i].sourcefile.path
 		sources[#sources + 1] = file
+		objects[#objects + 1] = tasks[i].objectfile.path
 		if tasks[i].needRecompile then
 			updated[#updated + 1] = file
-			print("PARALLEL_OBJECT", file)
+			--print("PARALLEL_OBJECT", file)
 		end
 	end
 
 	print("Parallel Assemble. files:", #updated)
 
-	local objects = {}
-	local tpipes = {}
-	local assemble = true
-	for i = 1, #tasks do
-		local task = tasks[i]
-		objects[#objects + 1] = task.objectfile.path
-		if task.needRecompile then
-			--print("PARALLEL_OBJECT", task.sourcefile.path)
-			local pipe = assert(io.popen(task.objrule, 'r'))
-			tpipes[#tpipes + 1] = {
-				pipe = pipe,
-				task = task,
-			}
-		end
+	local j = tonumber(self.j)
+	ctasks = self:prepareLibTasks(tasks)
+	glinkLib.parallel_tasks_execute(ctasks, j)
+	
+	for key, task in ipairs(tasks) do
+		self.fileCache:updateFile(task.objectfile.path)
+		self.fileCache:updateFile(task.dependfile.path)
 	end
-
-	for i = 1, #tpipes do
-		local status = tpipes[i].pipe:close()
-		tpipes[i].status = status
-		self.fileCache:updateFile(tpipes[i].task.objectfile.path);
-	end
-
-	for i = 1, #tpipes do
-		if tpipes[i].status then 
-			--print("PARALLEL_DEPEND", tpipes[i].task.sourcefile.path)
-			local pipe = assert(io.popen(tpipes[i].task.deprule, 'r'))
-			tpipes[i].pipe = pipe
-		else
-			print(text.red("Parallel assemble error"), tpipes[i].task.sourcefile.path)
-			assemble = false
-		end
-	end
-
-	for i = 1, #tpipes do
-		if tpipes[i].status == true then 
-			local status = tpipes[i].pipe:close()
-			tpipes[i].depstatus = status
-			self.fileCache:updateFile(tpipes[i].task.dependfile.path);
-		end
-	end
-
-	if assemble == false then os.exit(1) end
 
 	local ret
 	if (objects[1]) then

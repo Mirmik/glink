@@ -1,66 +1,72 @@
-local files = find.findInTree("src", ".*.gll$", ".*HIDE.*")
-script:evalFile(files, _ENV)
+--local files = find.findInTree("../genos", ".*.gll$", ".*HIDE.*")
+--script:evalFile(files, _ENV)
 
 compiler = CXXModuleCompiler:new{
-	buildutils = {
-		CXX = "g++",
-		CC = "gcc",
-		AR = "ar",
-		LD = "ld",
-		OBJDUMP = "objdump",
+	buildutils = { 
+		CXX = "g++", 
+		CC = "gcc", 
+		AR = "ar", 
+		LD = "ld", 
+		OBJDUMP = "objdump" 
 	},
-
 	opts = {
 		--weakRecompile = "noscript",
 		optimization = "-O2",
-
 		standart = {
-			cxx = "-std=c++11",
-			cc = "-std=c11",
+			cxx = "-std=gnu++11",
+			cc = "-std=gnu11",
 		},
-	
-		defines = {},
-		includePaths = {"include"},
-		libs = {},
 		options = {
-			all = "-fdata-sections -ffunction-sections -Wl,--gc-sections", 
-			cc = "HereYouAre",
+			all = "-Wl,--gc-sections -fdata-sections -ffunction-sections",
+			cc = "",
+			cxx = "",
+			ld = "",
 		}
-		--ld_options = ["-fdata-sections", "-ffunction-sections", "-Wl,--gc-sections"],
 	},
-
 	builddir = "./build",
 }
 --compiler.debugInfo = true;
+--compiler.parallel = true;
 
-Module("main", {
-	directory = "src",
-	sources = {
-		cxx = "main.cpp ttt.cpp"
-	}
-})
-
-Implementation("main2", "impl", {
-	directory = "src",
-	sources = {
-		cxx = "main.cpp ttt.cpp"
-	}
-})
-
-if (ARGV[1]) then
-	if ARGV[1] == "clean" then
+if (OPTS[1]) then
+	if OPTS[1] == "clean" then
 		compiler:cleanBuildDirectory()
+		os.exit(0)
+	elseif OPTS[1] == "rebuild" then
+		compiler.rebuild = true 
+	elseif OPTS[1] == "install" then
+		os.execute("bash ./install.sh")
+		os.exit(1) 
 	else
 		error(text.red("Unresolved Parametr"))
 	end
-	os.exit(0)
 end
+
+if (OPTS.j) then
+	print("j:",OPTS.j)
+	compiler.j = OPTS.j
+	compiler.parallel = true
+end
+
+Module("main", {
+	sources = {
+		cxx = "main.cpp ttt.cpp",
+	},
+
+	opts = {
+		includePaths = ".",
+	},
+
+	modules = {
+	},
+
+	includeModules = {
+	},
+})
 
 compiler:updateBuildDirectory()
 
 local ret = compiler:assembleModule("main", {
-	target = "genos"
 })
 
 if not ret then print(text.yellow("Nothing to do")) end
- 

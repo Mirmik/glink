@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include "inc.h"
+#include <iostream>
 
-int main(int argc, char** argv) {
-	printf("HeslloWorslddd\r\n");
+int main() {
+
 }

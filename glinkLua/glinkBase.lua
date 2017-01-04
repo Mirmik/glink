@@ -2,13 +2,12 @@ local _local_file = debug.getinfo(1).short_src
 local _n, _n, _current_directory = string.find(debug.getinfo(1).short_src, "^(.+/)[^/]+$")
 __directory = _current_directory
 
-print(_current_directory)
-
 --unstandart extension
 dofile(__directory .. "/lib/copy.lua")
 dofile(__directory .. "/lib/getopt.lua")
 
-OPTS = getopt( arg, "" )
+OPTS = getopt( arg, "j" )
+--print(table.tostring(OPTS))
 
 GlinkGlobal = dofile(__directory .. "/classes/GlinkGlobal.lua")
 ScriptMachine = dofile(__directory .. "/classes/ScriptMachine.lua")

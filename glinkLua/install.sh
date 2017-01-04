@@ -29,3 +29,6 @@ sudo chmod +x $executable
 sudo cp ./glink-init $executableInit
 sudo sed -i 's|INSTALLDIR|'$installdir'|g' $executableInit
 sudo chmod +x $executableInit
+
+make
+sudo cp glinkLib.so /usr/local/lib/lua/5.3/glinkLib.so
