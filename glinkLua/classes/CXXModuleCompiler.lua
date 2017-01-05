@@ -52,6 +52,41 @@ function CXXModuleCompiler:new(args)
 	return compiler		
 end
 
+function CXXModuleCompiler:standartArgsRoutine(OPTS)  	
+	if (OPTS.j) then
+		self.parallel = OPTS.j
+	end
+	
+	OPTS.silent = OPTS.silent and OPTS.silent or OPTS.s
+	OPTS.debug = OPTS.debug and OPTS.debug or OPTS.d
+
+	if (OPTS.debug) then
+		self.info = "debug"
+	end
+
+	if (OPTS.silent) then
+		self.info = "silent"
+	end
+
+	if (OPTS.silent and OPTS.debug) then
+		error(text.red("Silent and debug options at one moment???"))
+	end
+
+	if (OPTS[1]) then
+		if OPTS[1] == "clean" then
+			self:cleanBuildDirectory()
+			os.exit(0)
+		elseif OPTS[1] == "rebuild" then
+			self.forceRebuild = true 
+		--elseif OPTS[1] == "install" then
+		--	os.execute("bash ./install.sh")
+		--	os.exit(0) 
+		else
+			error(text.red("Unresolved Parametr ") .. text.yellow(OPTS[1]))
+		end
+	end
+end
+
 local function __helper_stringToArray(obj) 
 	if (not obj) then return {} end
 	if (type(obj) == "string") then return obj:split(' ') end
@@ -170,6 +205,10 @@ function CXXModuleCompiler:cleanBuildDirectory()
 	if (not lfs.attributes(self.builddir)) then return end
 	for file in lfs.dir(self.builddir) do
 		if(not (file == "." or file == "..")) then  
+			if self.info == "silent" then
+			else
+				print("RM " .. pathops.resolve(self.builddir, file))
+			end
 			os.remove(pathops.resolve(self.builddir, file))
 		end
 	end
@@ -410,10 +449,11 @@ function CXXModuleCompiler:executableCreate(objectfiles, objects, targetfile, ru
 		tgt = targetfile.path
 	})
 	
-	if self.debugInfo then 
-		print("LINK\t" .. rule);
-	else 
-		print("LINK\t" .. targetfile.path);
+	if self.info == "debug" then 
+		print("LINK " .. rule .. "\r\n");
+	elseif self.info == "silent" then
+	else
+		print("LINK " .. targetfile.path );
 	end
 
 	local pipe = assert(io.popen(rule, 'r'))
@@ -459,10 +499,11 @@ function CXXModuleCompiler:objectCreate(sourcefile, objectfile, dependfile, rule
 		tgt = dependfile.path
 	})
 	
-	if self.debugInfo then 
-		print(rule) 
-	else 
-		print("OBJECT\t" .. sourcefile.path) 
+	if self.info == "debug" then 
+		print(rule .. "\r\n") 
+	elseif self.info == "silent" then
+	else
+		print("OBJECT " .. sourcefile.path) 
 	end
 
 	local objpipe = assert(io.popen(rule, 'r'))
@@ -482,7 +523,7 @@ function CXXModuleCompiler:objectCreate(sourcefile, objectfile, dependfile, rule
 end
 
 function CXXModuleCompiler:needToRecompile(objfile, depfile, modmtime, weak)
-	if self.rebuild then return true end
+	if self.forceRebuild then return true end
 	if objfile.exists == false then return true end 
 	if depfile.exists == false then return true end 
 	if weak == "norecompile" then return false end
@@ -638,10 +679,19 @@ end
 function CXXModuleCompiler:prepareLibTasks(tasks)
 	local result = {}
 	for key, task in ipairs(tasks) do
+		local message
+		if self.info == "debug" then
+			message = task.objrule .. "\r\n"
+		elseif self.info == "silent" then
+			message = nil
+		else
+			message = "OBJECT " .. task.sourcefile.path 
+		end
+
 		if task.needRecompile then
 			result[#result + 1] = {
 				rule = task.objrule,
-				message = "OBJECT " .. task.sourcefile.path,
+				message = message,
 				next = {
 					rule = task.deprule,
 					message = nil,
@@ -649,6 +699,7 @@ function CXXModuleCompiler:prepareLibTasks(tasks)
 				}
 			}
 		end
+		
 	end
 	return result
 end
@@ -689,9 +740,10 @@ function CXXModuleCompiler:assembleModuleParallel (name, addopts)
 		end
 	end
 
-	print("Parallel Assemble. files:", #updated)
+	--print("Parallel Assemble. files:", #updated)
 
-	local j = tonumber(self.j)
+	local j 
+	j = (self.parallel == true) and #tasks or tonumber(self.parallel)
 	ctasks = self:prepareLibTasks(tasks)
 	glinkLib.parallel_tasks_execute(ctasks, j)
 	
@@ -710,7 +762,7 @@ end
 
 
 function CXXModuleCompiler:assembleModule (name, addopts)
-	if self.parallel == true then
+	if self.parallel then
 		return self:assembleModuleParallel(name,addopts)
 	else
 		return self:assembleModuleStraight(name,addopts)

@@ -144,7 +144,6 @@ int __glink_parallel_tasks_execute(lua_State* L, size_t nthreads, size_t ntasks)
 	}	
 	lua_pop(L, 1);
 
-
 	wargs.array = tasks;
 	wargs.index = 0;
 	wargs.abort = false;
@@ -177,6 +176,7 @@ int __glink_parallel_tasks_execute(lua_State* L, size_t nthreads, size_t ntasks)
 int glink_parallel_tasks_execute(lua_State* L) {
 	int ntasks, nthreads;
 
+	lua_settop(L, 2);
 	luaL_checktype(L, 1, LUA_TTABLE);
 	ntasks = luaL_len(L, 1);
 	luaL_checktype(L, 2, LUA_TNUMBER);
