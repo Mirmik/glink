@@ -60,13 +60,11 @@ void* __worker_thread(void* arg) {
 	struct task_s * task;
 	struct worker_s * worker = (struct worker_s *) arg;
 	struct worker_args_common* wcommon = worker->common;
-	//printf("WORKER_START\n\r");
 	
 	while(1) {
 		//common operation
 		pthread_mutex_lock(&wcommon->mutex);
 		if (wcommon->total == wcommon->index || wcommon->abort) {
-			pthread_mutex_unlock(&wcommon->mutex);
 			goto __exit;
 		}
 
@@ -82,8 +80,7 @@ void* __worker_thread(void* arg) {
 			
 			if(ret != 0) {
 				pthread_mutex_lock(&wcommon->mutex);
-				wcommon->abort = true;
-				pthread_mutex_unlock(&wcommon->mutex);	
+				wcommon->abort = true;	
 				goto __exit;
 			}
 
@@ -92,8 +89,8 @@ void* __worker_thread(void* arg) {
 	};	
 
 	__exit: 
-	//printf("WORKER_FINISH\n\r");
-	return (void*) 0;
+		pthread_mutex_unlock(&wcommon->mutex);
+		return (void*) 0;
 }
 
 int __set_task(lua_State* L, struct task_s* ittask) {

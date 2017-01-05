@@ -2,6 +2,10 @@ local ruleops = {}
 
 function ruleops.__substitute(rule,list)
 	for key, value in pairs(list) do
+		if value == nil then value = "" end
+		--print("rule : " .. rule)
+		--print("key : " .. key)
+		--print("value : " .. value)
 		rule = rule:gsub("%%" .. key .. "%%", value)
 	end 
 	return rule

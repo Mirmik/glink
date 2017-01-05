@@ -20,7 +20,7 @@ VariantModuleClass = dofile(__directory .. "/classes/VariantModuleClass.lua")
 File = dofile(__directory .. "/classes/File.lua");
 FileCache = dofile(__directory .. "/classes/FileCache.lua");
 
-CXXModuleCompiler = dofile(__directory .. "/classes/CXXModuleCompiler.lua");
+CXXDeclarativeCompiler = dofile(__directory .. "/classes/CXXDeclarativeCompiler.lua");
 	
 local script = ScriptMachine:new()
 local mlib = ModuleLibrary:new(script)
@@ -36,7 +36,7 @@ script:evalFile("./glink.lua", {
 	script = script,
 
 	ScriptMachine = ScriptMachine,
-	CXXModuleCompiler = CXXModuleCompiler,
+	CXXDeclarativeCompiler = CXXDeclarativeCompiler,
 	ModuleLibrary = ModuleLibrary,
 
 	pathops = dofile(__directory .. "/lib/pathops.lua"),

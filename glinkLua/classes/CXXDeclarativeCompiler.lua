@@ -9,27 +9,27 @@ local ruleops = dofile(__directory .. "/lib/ruleops.lua")
 --local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
 --local VariantModuleClass = dofile(__directory .. "/classes/VariantModuleClass.lua")
 
-local CXXModuleCompiler = {}
-CXXModuleCompiler.__index = CXXModuleCompiler
+local CXXDeclarativeCompiler = {}
+CXXDeclarativeCompiler.__index = CXXDeclarativeCompiler
 
-function CXXModuleCompiler:new(args) 
+function CXXDeclarativeCompiler:new(args) 
 	local compiler = {}
 	setmetatable(compiler, self)
+	compiler.opts = args.opts and args.opts or {}
 
-	assert(args.buildutils, "Need buildutils property in CXXModuleCompiler constructor's args");
-	assert(args.buildutils.CXX, "Need CXX property in buildutils");
-	assert(args.buildutils.CC, "Need CC property in buildutils");
-	assert(args.buildutils.AR, "Need AR property in buildutils");
-	assert(args.buildutils.OBJDUMP, "Need OBJDUMP property in buildutils");
-	assert(args.opts, "Need opts property in CXXModuleCompiler constructor's args");
+	--assert(args.buildutils, "Need buildutils property in CXXDeclarativeCompiler constructor's args");
+	--assert(args.buildutils.CXX, "Need CXX property in buildutils");
+	--assert(args.buildutils.CC, "Need CC property in buildutils");
+	--assert(args.buildutils.AR, "Need AR property in buildutils");
+	--assert(args.buildutils.OBJDUMP, "Need OBJDUMP property in buildutils");
 	
 	--Set default builddir if needed.
-	compiler.builddir = args.builddir or pathops.resolve(os.getenv("PWD"), "build");
+	compiler.builddir = args.builddir and args.builddir or os.getenv("PWD")
 	
 	--//We use FileCache as file operations manager.
 	compiler.fileCache = FileCache:new()
 
-	compiler.opts = args.opts
+
 	if (not compiler.opts.optimization) then compiler.opts.optimization = "-O2" end
 	compiler:restoreOptsFull(compiler.opts, '.')
 
@@ -43,6 +43,11 @@ function CXXModuleCompiler:new(args)
 		s_dep_rule = "%CC% -MM %src% > %tgt% %__options__%",
 		ld_rule = "%CXX% %objs% -o %tgt% %__options__%",
 		__options__ = "%STANDART% %OPTIMIZATION% %DEFINES% %INCLUDE% %OPTIONS%",
+		
+		fortran_rule = "%FORTRAN% -cpp -c %src% -o %tgt% %__fortran_options__%",
+		fortran_dep_rule = "%FORTRAN% -cpp -MM %src% > %tgt% %__fortran_options__%",
+		__fortran_options__ = "%INCLUDE%",
+		
 		__link_options__ = "%OPTIMIZATION% %LIBS% %SHARED% %LDSCRIPTS% %OPTIONS%",
 	}, args.buildutils);
 
@@ -52,7 +57,7 @@ function CXXModuleCompiler:new(args)
 	return compiler		
 end
 
-function CXXModuleCompiler:standartArgsRoutine(OPTS)  	
+function CXXDeclarativeCompiler:standartArgsRoutine(OPTS)  	
 	if (OPTS.j) then
 		self.parallel = OPTS.j
 	end
@@ -135,7 +140,7 @@ function __helper_resolveOptions2(o,n)
 end
 
 --Prepare opts
-function CXXModuleCompiler:restoreOpts(opts, basedir) 
+function CXXDeclarativeCompiler:restoreOpts(opts, basedir) 
 	opts.includePaths = __helper_stringToArray(opts.includePaths)
 	opts.ldscripts = __helper_stringToArray(opts.ldscripts)
 	opts.libs = __helper_stringToArray(opts.libs)
@@ -146,6 +151,7 @@ function CXXModuleCompiler:restoreOpts(opts, basedir)
 		opts.options.cxx = __helper_stringToArray(opts.options.cxx)
 		opts.options.cc = __helper_stringToArray(opts.options.cc)
 		opts.options.ld = __helper_stringToArray(opts.options.ld)
+		opts.options.fortran = __helper_stringToArray(opts.options.fortran)
 
 		if opts.options.all then
 			opts.options.cxx = __helper_concat(opts.options.cxx, opts.options.all);
@@ -159,7 +165,7 @@ function CXXModuleCompiler:restoreOpts(opts, basedir)
 end
 
 --Prepare full opts
-function CXXModuleCompiler:restoreOptsFull (opts, basedir)
+function CXXDeclarativeCompiler:restoreOptsFull (opts, basedir)
 	if (opts.options == nil) then opts.options = {} end
 
 	if (not opts.options.all) then opts.options.all = {} end
@@ -170,19 +176,26 @@ function CXXModuleCompiler:restoreOptsFull (opts, basedir)
 	if (not opts.libs) then opts.libs = {} end
 	if (not opts.defines) then opts.defines = {} end
 	if (not opts.includePaths) then opts.includePaths = {} end
+	
+	if (not opts.standart) then opts.standart = {} end
+	if (not opts.standart.cc) then opts.standart.cc = "" end
+	if (not opts.standart.cxx) then opts.standart.cxx = "" end
+	if (not opts.standart.fortran) then opts.standart.fortran = "" end
 		
 	self:restoreOpts(opts, basedir) 
 end
 
 --Prepare sources
-function CXXModuleCompiler:restoreSources(sources, basedir) 
+function CXXDeclarativeCompiler:restoreSources(sources, basedir) 
 	if (not sources.cxx) then sources.cxx = {} end
 	if (not sources.cc) then sources.cc = {} end
 	if (not sources.s) then sources.s = {} end
+	if (not sources.fortran) then sources.fortran = {} end
 
 	if (type(sources.cxx) == "string") then sources.cxx = sources.cxx:split(' ') end
 	if (type(sources.cc) == "string") then sources.cc = sources.cc:split(' ') end
 	if (type(sources.s) == "string") then sources.s = sources.s:split(' ') end
+	if (type(sources.fortran) == "string") then sources.fortran = sources.fortran:split(' ') end
 
 	local sourcesDirectory = sources.directory and  
 			pathops.resolve(basedir, sources.directory) or 
@@ -191,23 +204,22 @@ function CXXModuleCompiler:restoreSources(sources, basedir)
 	__helper_restorePathArray(sources.cxx, sourcesDirectory);
 	__helper_restorePathArray(sources.cc, sourcesDirectory);
 	__helper_restorePathArray(sources.s, sourcesDirectory);
+	__helper_restorePathArray(sources.fortran, sourcesDirectory);
 end
 
 --BUILD DIRECTORY OPERATIONS
 
 --Create build directory if needed
-function CXXModuleCompiler:updateBuildDirectory() 
+function CXXDeclarativeCompiler:updateBuildDirectory() 
 	recursiveMkdir(self.builddir);
 end
 
 --/*Unlink all files in build directory*/
-function CXXModuleCompiler:cleanBuildDirectory()
+function CXXDeclarativeCompiler:cleanBuildDirectory()
 	if (not lfs.attributes(self.builddir)) then return end
 	for file in lfs.dir(self.builddir) do
 		if(not (file == "." or file == "..")) then  
-			if self.info == "silent" then
-			else
-				print("RM " .. pathops.resolve(self.builddir, file))
+			if self.info == "debug" then
 			end
 			os.remove(pathops.resolve(self.builddir, file))
 		end
@@ -215,7 +227,7 @@ function CXXModuleCompiler:cleanBuildDirectory()
 end
 
 --RULES OPERATIONS
-function CXXModuleCompiler:resolveODRule(protorules, opts) 
+function CXXDeclarativeCompiler:resolveODRule(protorules, opts) 
 	assert(protorules);
 
 	local tempoptions = ruleops.substitute(protorules.__options__, {
@@ -237,16 +249,26 @@ function CXXModuleCompiler:resolveODRule(protorules, opts)
 		OPTIONS = table.concat(opts.options.cxx," "),
 	})
 
+	local fortran_options = ruleops.substitute(protorules.__fortran_options__, {
+		INCLUDE = table.concat(
+			util.map(opts.includePaths, function(file) return "-I" .. file end), 
+			" "
+		),
+	})
+
 	local ret = {};
 	ret.cc_rule = ruleops.substitute(protorules.cc_rule, {__options__= cc_options});
 	ret.cc_dep_rule = ruleops.substitute(protorules.cc_dep_rule, {__options__= cc_options});
 	ret.cxx_rule = ruleops.substitute(protorules.cxx_rule, {__options__= cxx_options});
 	ret.cxx_dep_rule = ruleops.substitute(protorules.cxx_dep_rule, {__options__= cxx_options});
 
+	ret.fortran_rule = ruleops.substitute(protorules.fortran_rule, {__fortran_options__= fortran_options});
+	ret.fortran_dep_rule = ruleops.substitute(protorules.fortran_dep_rule, {__fortran_options__= fortran_options});
+
 	return ret;
 end
 
-function CXXModuleCompiler:resolveLinkRule(protorules, opts) 
+function CXXDeclarativeCompiler:resolveLinkRule(protorules, opts) 
 	assert(protorules);
 
 	local tempoptions = ruleops.substitute(protorules.__link_options__, {
@@ -267,7 +289,7 @@ function CXXModuleCompiler:resolveLinkRule(protorules, opts)
 	return ret;
 end
 
-function CXXModuleCompiler:moduleStateRestore(mod)
+function CXXDeclarativeCompiler:moduleStateRestore(mod)
 	--Restore Opts State.
 	local opts = mod:getOpts();
 	self:restoreOpts(opts, mod.moduleDirectory);
@@ -277,13 +299,13 @@ function CXXModuleCompiler:moduleStateRestore(mod)
 	self:restoreSources(sources, mod.moduleDirectory);
 end
 
-function CXXModuleCompiler:addOptsStateRestore(addopts, mod) 
+function CXXDeclarativeCompiler:addOptsStateRestore(addopts, mod) 
 	if addopts then
 		self:restoreOpts(addopts, mod.moduleDirectory);
 	end
 end
 
-function CXXModuleCompiler:resolveIncludeModules(mod)
+function CXXDeclarativeCompiler:resolveIncludeModules(mod)
 	local incmodsrec = mod.mod.includeModules;
 	if incmodsrec == nil then
 		return 
@@ -314,7 +336,7 @@ function CXXModuleCompiler:resolveIncludeModules(mod)
 	mod.mod.includeModules = nil;
 end
 
-function CXXModuleCompiler:moduleTreeToArray (mod)
+function CXXDeclarativeCompiler:moduleTreeToArray (mod)
 	local array = {}
 	array[1] = mod
 
@@ -333,7 +355,7 @@ end
 --This operation construct module array for compile ops.
 --@mod - Main module. Root of tree.
 --@addopts - module's added options
-function CXXModuleCompiler:prepareModuleArray(mod, addopts)
+function CXXDeclarativeCompiler:prepareModuleArray(mod, addopts)
 	--Worker
 	local function f(mod, parentopts, addopts)
 		--Add all relative paths to absolute.
@@ -377,7 +399,7 @@ function CXXModuleCompiler:prepareModuleArray(mod, addopts)
 end
 
 --MODARRAY OPERATIONS AND CHECKERS
-function CXXModuleCompiler:getAllModuleNames(modarray)
+function CXXDeclarativeCompiler:getAllModuleNames(modarray)
 	local names = {}
 	for i = 1, #modarray do
 		local mod = modarray[i]
@@ -386,7 +408,7 @@ function CXXModuleCompiler:getAllModuleNames(modarray)
 	return names;
 end
 
-function CXXModuleCompiler:getAllDependsNames(modarray)
+function CXXDeclarativeCompiler:getAllDependsNames(modarray)
 	local depends = {}
 	for i = 1, #modarray do
 		local mod = modarray[i]
@@ -404,7 +426,7 @@ function CXXModuleCompiler:getAllDependsNames(modarray)
 	return depends
 end
 
-function CXXModuleCompiler:checkModuleArrayDepends (modarray)
+function CXXDeclarativeCompiler:checkModuleArrayDepends (modarray)
 	local nams = self:getAllModuleNames(modarray);
 	local deps = self:getAllDependsNames(modarray);
 
@@ -419,7 +441,7 @@ function CXXModuleCompiler:checkModuleArrayDepends (modarray)
 	end
 end
 
-function CXXModuleCompiler:checkModuleArrayOptions (modarray)
+function CXXDeclarativeCompiler:checkModuleArrayOptions (modarray)
 	for i = 1, #modarray do
 		local mod = modarray[1]
 		if mod.__opts.weakRecompile == "noscript" then 
@@ -434,7 +456,7 @@ function CXXModuleCompiler:checkModuleArrayOptions (modarray)
 	end
 end
 
-function CXXModuleCompiler:__assembleObjects(mod, objects) 
+function CXXDeclarativeCompiler:__assembleObjects(mod, objects) 
 	local linkRule = self:resolveLinkRule(self.rules, mod.__opts).ld_rule;
 	local target = mod.__opts.target or "target"
 
@@ -443,7 +465,7 @@ function CXXModuleCompiler:__assembleObjects(mod, objects)
 end
 
 
-function CXXModuleCompiler:executableCreate(objectfiles, objects, targetfile, rule)
+function CXXDeclarativeCompiler:executableCreate(objectfiles, objects, targetfile, rule)
 	rule = ruleops.substitute(rule, {
 		objs = table.concat(objects, " "),
 		tgt = targetfile.path
@@ -463,7 +485,7 @@ function CXXModuleCompiler:executableCreate(objectfiles, objects, targetfile, ru
 	self.fileCache:updateFile(targetfile.path)
 end
 
-function CXXModuleCompiler:executableUpdate(objects, target, ldrule, modmtime, weak)
+function CXXDeclarativeCompiler:executableUpdate(objects, target, ldrule, modmtime, weak)
 	local objectfiles = {}
 	
 	for i = 1, #objects do
@@ -488,7 +510,7 @@ function CXXModuleCompiler:executableUpdate(objects, target, ldrule, modmtime, w
 	return false;
 end
 
-function CXXModuleCompiler:objectCreate(sourcefile, objectfile, dependfile, rule, deprule)
+function CXXDeclarativeCompiler:objectCreate(sourcefile, objectfile, dependfile, rule, deprule)
 	rule = ruleops.substitute(rule, {
 		src = sourcefile.path,
 		tgt = objectfile.path
@@ -522,7 +544,7 @@ function CXXModuleCompiler:objectCreate(sourcefile, objectfile, dependfile, rule
 	self.fileCache:updateFile(dependfile.path);
 end
 
-function CXXModuleCompiler:needToRecompile(objfile, depfile, modmtime, weak)
+function CXXDeclarativeCompiler:needToRecompile(objfile, depfile, modmtime, weak)
 	if self.forceRebuild then return true end
 	if objfile.exists == false then return true end 
 	if depfile.exists == false then return true end 
@@ -548,7 +570,7 @@ function CXXModuleCompiler:needToRecompile(objfile, depfile, modmtime, weak)
 	return maxtime > depfile.mtime
 end
 
-function CXXModuleCompiler:objectUpdate (path, deprule, objrule, modmtime, weak)
+function CXXDeclarativeCompiler:objectUpdate (path, deprule, objrule, modmtime, weak)
 	local sourcefile = self.fileCache:getFile(path);
 	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
 	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
@@ -560,7 +582,7 @@ function CXXModuleCompiler:objectUpdate (path, deprule, objrule, modmtime, weak)
 	return objectfile.path;
 end
 
-function CXXModuleCompiler:__updateModObjects(mod) 
+function CXXDeclarativeCompiler:__updateModObjects(mod) 
 	assert(mod)
 	local weak = mod.__opts.weakRecompile  
 
@@ -585,6 +607,13 @@ function CXXModuleCompiler:__updateModObjects(mod)
 		end
 	end
 
+	if sources.fortran then
+		for i = 1, #sources.fortran do
+			--print(sources.fortran[i])
+			objects[#objects + 1] = self:objectUpdate(sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak)
+		end
+	end
+
 	return objects;
 end
 
@@ -593,7 +622,7 @@ end
 --Main executable assemle method
 --@name - name of assembled module
 --@addopts - module's added options*/
-function CXXModuleCompiler:assembleModuleStraight (name, addopts)
+function CXXDeclarativeCompiler:assembleModuleStraight (name, addopts)
 	--Get module from library.
 	local mod = self.mlib:getModule(name)
 
@@ -624,7 +653,7 @@ function CXXModuleCompiler:assembleModuleStraight (name, addopts)
 	return ret;
 end
 
-function CXXModuleCompiler:objectTask (path, deprule, objrule, modmtime, weak)
+function CXXDeclarativeCompiler:objectTask (path, deprule, objrule, modmtime, weak)
 	local sourcefile = self.fileCache:getFile(path);
 	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
 	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
@@ -650,7 +679,7 @@ function CXXModuleCompiler:objectTask (path, deprule, objrule, modmtime, weak)
 	return task;
 end
 
-function CXXModuleCompiler:objectTasks(mod)
+function CXXDeclarativeCompiler:objectTasks(mod)
 	local weak = mod.__opts.weakRecompile  
 	local sources = mod:getSources()
 	local objects = {}
@@ -676,7 +705,7 @@ function CXXModuleCompiler:objectTasks(mod)
 	return objects;
 end
 
-function CXXModuleCompiler:prepareLibTasks(tasks)
+function CXXDeclarativeCompiler:prepareLibTasks(tasks)
 	local result = {}
 	for key, task in ipairs(tasks) do
 		local message
@@ -704,7 +733,7 @@ function CXXModuleCompiler:prepareLibTasks(tasks)
 	return result
 end
 
-function CXXModuleCompiler:assembleModuleParallel (name, addopts)
+function CXXDeclarativeCompiler:assembleModuleParallel (name, addopts)
 	--Get module from library.
 	local mod = self.mlib:getModule(name)
 
@@ -761,7 +790,7 @@ function CXXModuleCompiler:assembleModuleParallel (name, addopts)
 end
 
 
-function CXXModuleCompiler:assembleModule (name, addopts)
+function CXXDeclarativeCompiler:assembleModule (name, addopts)
 	if self.parallel then
 		return self:assembleModuleParallel(name,addopts)
 	else
@@ -769,4 +798,4 @@ function CXXModuleCompiler:assembleModule (name, addopts)
 	end
 end
 
-return CXXModuleCompiler
+return CXXDeclarativeCompiler

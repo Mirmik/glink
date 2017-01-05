@@ -1,6 +1,3 @@
---local files = find.findInTree("../genos", ".*.gll$", ".*HIDE.*")
---script:evalFile(files, _ENV)
-
 compiler = CXXModuleCompiler:new{
 	buildutils = { 
 		CXX = "g++", 
@@ -25,30 +22,15 @@ compiler = CXXModuleCompiler:new{
 	},
 	builddir = "./build",
 }
---compiler.debugInfo = true;
---compiler.parallel = true;
 
-if (OPTS[1]) then
-	if OPTS[1] == "clean" then
-		compiler:cleanBuildDirectory()
-		os.exit(0)
-	elseif OPTS[1] == "rebuild" then
-		compiler.rebuild = true 
-	elseif OPTS[1] == "install" then
-		os.execute("bash ./install.sh")
-		os.exit(1) 
-	else
-		error(text.red("Unresolved Parametr"))
-	end
-end
-
-if (OPTS.parallel) then
-	compiler.parallel = true
-end
+compiler:standartArgsRoutine(OPTS)
 
 Module("main", {
 	sources = {
-		cxx = "main.cpp",
+		directory = nil,
+		cxx = "",
+		cc = "main.c",
+		s = "",
 	},
 
 	opts = {
@@ -65,6 +47,7 @@ Module("main", {
 compiler:updateBuildDirectory()
 
 local ret = compiler:assembleModule("main", {
+	target = "helloworld"
 })
 
 if not ret then print(text.yellow("Nothing to do")) end

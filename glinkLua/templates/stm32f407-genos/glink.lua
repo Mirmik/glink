@@ -1,7 +1,7 @@
 local files = find.findInTree("../genos", ".*.gll$", ".*HIDE.*")
 script:evalFile(files, _ENV)
 
-compiler = CXXModuleCompiler:new{
+compiler = CXXDeclarativeCompiler:new{
 	buildutils = { 
 		CXX = "arm-none-eabi-g++", 
 		CC = "arm-none-eabi-gcc", 
