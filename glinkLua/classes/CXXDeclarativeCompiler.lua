@@ -147,17 +147,17 @@ function CXXDeclarativeCompiler:restoreOpts(opts, basedir)
 	opts.defines = __helper_stringToArray(opts.defines)
 
 	if (opts.options) then
-		opts.options.all = __helper_stringToArray(opts.options.all)
+		--opts.options.all = __helper_stringToArray(opts.options.all)
 		opts.options.cxx = __helper_stringToArray(opts.options.cxx)
 		opts.options.cc = __helper_stringToArray(opts.options.cc)
 		opts.options.ld = __helper_stringToArray(opts.options.ld)
 		opts.options.fortran = __helper_stringToArray(opts.options.fortran)
 
-		if opts.options.all then
-			opts.options.cxx = __helper_concat(opts.options.cxx, opts.options.all);
-			opts.options.cc = __helper_concat(opts.options.cc, opts.options.all);
-			opts.options.ld = __helper_concat(opts.options.ld, opts.options.all);
-		end
+		--if opts.options.all then
+		--	opts.options.cxx = __helper_concat(opts.options.cxx, opts.options.all);
+		--	opts.options.cc = __helper_concat(opts.options.cc, opts.options.all);
+		--	opts.options.ld = __helper_concat(opts.options.ld, opts.options.all);
+		--end
 	end
 	__helper_restorePathArray(opts.includePaths, basedir)
 	__helper_restorePathArray(opts.ldscripts, basedir)
@@ -168,11 +168,12 @@ end
 function CXXDeclarativeCompiler:restoreOptsFull (opts, basedir)
 	if (opts.options == nil) then opts.options = {} end
 
-	if (not opts.options.all) then opts.options.all = {} end
+	--if (not opts.options.all) then opts.options.all = {} end
 	if (not opts.options.cxx) then opts.options.cxx = {} end
 	if (not opts.options.cc) then opts.options.cc = {} end
 	if (not opts.options.ld) then opts.options.ld = {} end
 	if (not opts.ldscripts) then opts.ldscripts = {} end
+	if (not opts.fortran) then opts.fortran = {} end
 	if (not opts.libs) then opts.libs = {} end
 	if (not opts.defines) then opts.defines = {} end
 	if (not opts.includePaths) then opts.includePaths = {} end
@@ -180,7 +181,6 @@ function CXXDeclarativeCompiler:restoreOptsFull (opts, basedir)
 	if (not opts.standart) then opts.standart = {} end
 	if (not opts.standart.cc) then opts.standart.cc = "" end
 	if (not opts.standart.cxx) then opts.standart.cxx = "" end
-	if (not opts.standart.fortran) then opts.standart.fortran = "" end
 		
 	self:restoreOpts(opts, basedir) 
 end
@@ -699,6 +699,12 @@ function CXXDeclarativeCompiler:objectTasks(mod)
 	if sources.cxx then
 		for i = 1, #sources.cxx do
 			objects[#objects + 1] = self:objectTask(sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak)
+		end
+	end
+
+	if sources.fortran then
+		for i = 1, #sources.fortran do
+			objects[#objects + 1] = self:objectTask(sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak)
 		end
 	end
 
