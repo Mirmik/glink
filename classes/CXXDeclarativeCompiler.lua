@@ -1,8 +1,8 @@
 glinkLib = require("glinkLib")
 
-local text = dofile(__directory .. "/lib/text.lua")
-local pathops = dofile(__directory .. "/lib/pathops.lua")
-local ruleops = dofile(__directory .. "/lib/ruleops.lua")
+local text = require("glink.lib.text")
+local pathops = require("glink.lib.pathops")
+local ruleops = require("glink.lib.ruleops")
 --local FileCache = dofile(__directory .. "/classes/FileCache.lua")
 
 --local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")

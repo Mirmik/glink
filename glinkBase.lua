@@ -3,24 +3,26 @@ local _n, _n, _current_directory = string.find(debug.getinfo(1).short_src, "^(.+
 __directory = _current_directory
 
 --unstandart extension
-dofile(__directory .. "/lib/copy.lua")
-dofile(__directory .. "/lib/getopt.lua")
+--require("/lib/copy")
+--require("/lib/getopt")
+require("glink.lib.copy")
+require("glink.lib.getopt")
 
 OPTS = getopt( arg, "j" )
 --print(table.tostring(OPTS))
 
-GlinkGlobal = dofile(__directory .. "/classes/GlinkGlobal.lua")
-ScriptMachine = dofile(__directory .. "/classes/ScriptMachine.lua")
-ModuleLibrary = dofile(__directory .. "/classes/ModuleLibrary.lua")
+GlinkGlobal = require("glink.classes.GlinkGlobal")
+ScriptMachine = require("glink.classes.ScriptMachine")
+ModuleLibrary = require("glink.classes.ModuleLibrary")
 
-ModuleClass= dofile(__directory .. "/classes/ModuleClass.lua")
-ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
-VariantModuleClass = dofile(__directory .. "/classes/VariantModuleClass.lua")
+ModuleClass= require("glink.classes.ModuleClass")
+ImplementationClass = require("glink.classes.ImplementationClass")
+VariantModuleClass = require("glink.classes.VariantModuleClass")
 
-File = dofile(__directory .. "/classes/File.lua");
-FileCache = dofile(__directory .. "/classes/FileCache.lua");
+File = require("glink.classes.File");
+FileCache = require("glink.classes.FileCache");
 
-CXXDeclarativeCompiler = dofile(__directory .. "/classes/CXXDeclarativeCompiler.lua");
+CXXDeclarativeCompiler = require("glink.classes.CXXDeclarativeCompiler");
 	
 local script = ScriptMachine:new()
 local mlib = ModuleLibrary:new(script)
@@ -39,10 +41,10 @@ script:evalFile("./glink.lua", {
 	CXXDeclarativeCompiler = CXXDeclarativeCompiler,
 	ModuleLibrary = ModuleLibrary,
 
-	pathops = dofile(__directory .. "/lib/pathops.lua"),
-	ruleops = dofile(__directory .. "/lib/ruleops.lua"),
-	text = dofile(__directory .. "/lib/text.lua"),
-	find = dofile(__directory .. "/lib/find.lua"),
+	pathops = require("glink.lib.pathops"),
+	ruleops = require("glink.lib.ruleops"),
+	text = require("glink.lib.text"),
+	find = require("glink.lib.find"),
 
 	Module = GlinkGlobal.Module,
 	Implementation = GlinkGlobal.Implementation,

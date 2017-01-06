@@ -1,6 +1,5 @@
---local File = dofile(__directory .. "/classes/File.lua")
-local pathops = dofile(__directory .. "/lib/pathops.lua")
-local text = dofile(__directory .. "/lib/text.lua")
+local pathops = require("glink.lib.pathops")
+local text = require("glink.lib.text")
 
 local ScriptMachine = {}
 ScriptMachine.__index = ScriptMachine

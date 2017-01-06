@@ -1,7 +1,13 @@
-all: glinkLib.so
+all: sharedlib/glinkLib.so
 
 glinkLib.so: ccsrc/glink.c
-	gcc ccsrc/glink.c --shared -o glinkLib.so -I/usr/include/lua5.3 -llua5.3 -Werror -std=gnu11 -pthread
+	gcc ccsrc/glink.c --shared -o sharedlib/glinkLib.so -I/usr/include/lua5.3 -llua5.3 -Werror -std=gnu11 -pthread
 
 clean:
-	rm glinkLib.so
+	rm sharedlib/glinkLib.so
+
+install:
+	./tools/install.sh
+
+uninstall:
+	./tools/uninstall.sh

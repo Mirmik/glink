@@ -1,4 +1,4 @@
-local pathops = dofile(__directory .. "/lib/pathops.lua")
+local pathops = require("glink.lib.pathops")
 
 function table.val_to_str ( v )
 	if "string" == type( v ) then

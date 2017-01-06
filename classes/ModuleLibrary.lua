@@ -1,4 +1,4 @@
-local text = dofile(__directory .. "/lib/text.lua")
+local text = require("glink.lib/text")
 
 --local ModuleClass = dofile(__directory .. "/classes/ModuleClass.lua")
 --local ImplementationClass = dofile(__directory .. "/classes/ImplementationClass.lua")
