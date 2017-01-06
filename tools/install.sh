@@ -4,7 +4,7 @@
 set -o xtrace
 
 #VARIABLES
-source variables.sh
+source tools/variables.sh
 
 if [ -d "$installdir" ]; then
 	sudo rm -r $installdir
@@ -23,11 +23,11 @@ sudo cp -r ./classes $lualibdir
 
 #INSTALL CC LIBS
 sudo mkdir -p $cclibdir
-sudo cp glinkLib.so $cclibdir/glinkLib.so
+sudo cp ./sharedlibs/glinkLib.so $cclibdir/glinkLib.so
 
-sudo cp ./glinkStarter.lua $installdir
-sudo cp ./glinkBase.lua $installdir
-sudo cp ./glinkInit.lua $installdir
+sudo cp ./starters/glinkStarter.lua $installdir
+sudo cp ./starters/glinkBase.lua $installdir
+sudo cp ./starters/glinkInit.lua $installdir
 
 sudo cp ./executable/glink $executable
 sudo sed -i 's|INSTALLDIR|'$installdir'|g' $executable
