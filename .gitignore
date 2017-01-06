@@ -1,2 +1,2 @@
-generic/sharedlibs/*
-generic/download/*
+#generic/sharedlibs/.*
+#generic/download/.*
