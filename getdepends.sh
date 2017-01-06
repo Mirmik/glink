@@ -1,5 +1,9 @@
 sudo apt-get install lua5.3 liblua5.3-dev -y
 
+mkdir -p generic
+mkdir -p generic/download
+mkdir -p generic/sharedlibs
+
 cd generic/download 
 
 rm -f luarocks-2.2.1.tar.gz*

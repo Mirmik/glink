@@ -1,6 +1,6 @@
 all: generic/sharedlibs/glinkLib.so
 
-glinkLib.so: ccsrc/glink.c
+generic/sharedlibs/glinkLib.so: src/glink.c
 	gcc src/glink.c --shared -o generic/sharedlibs/glinkLib.so -I/usr/include/lua5.3 -llua5.3 -Werror -std=gnu11 -pthread
 
 clean:
