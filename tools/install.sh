@@ -18,16 +18,16 @@ sudo chmod +x $installdir/tools/copyToLocal.sh
 
 #INSTALL LUA LIBS
 sudo mkdir -p $lualibdir
-sudo cp -r ./lib $lualibdir
-sudo cp -r ./classes $lualibdir
+sudo cp -r ./scripts/lib $lualibdir
+sudo cp -r ./scripts/classes $lualibdir
 
 #INSTALL CC LIBS
 sudo mkdir -p $cclibdir
-sudo cp ./sharedlibs/glinkLib.so $cclibdir/glinkLib.so
+sudo cp ./generic/sharedlibs/glinkLib.so $cclibdir/glinkLib.so
 
-sudo cp ./starters/glinkStarter.lua $installdir
-sudo cp ./starters/glinkBase.lua $installdir
-sudo cp ./starters/glinkInit.lua $installdir
+sudo cp ./scripts/starters/glinkStarter.lua $installdir
+sudo cp ./scripts/starters/glinkBase.lua $installdir
+sudo cp ./scripts/starters/glinkInit.lua $installdir
 
 sudo cp ./executable/glink $executable
 sudo sed -i 's|INSTALLDIR|'$installdir'|g' $executable

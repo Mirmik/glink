@@ -1,6 +1,6 @@
 sudo apt-get install lua5.3 liblua5.3-dev -y
 
-cd download 
+cd generic/download 
 
 rm -f luarocks-2.2.1.tar.gz*
 wget http://luarocks.org/releases/luarocks-2.2.1.tar.gz
