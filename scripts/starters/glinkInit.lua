@@ -6,7 +6,7 @@ package.path = "/opt/glink/?.lua;" .. package.path
 
 --unstandart extension
 require("glink.lib.copy")
-require("glink.getopt.lua")
+require("glink.lib.getopt")
 File = require("glink.classes.File");
 
 OPTS = getopt( arg, "" )
