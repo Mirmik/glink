@@ -8,5 +8,5 @@ executableInit=/usr/local/bin/glink-init
 #cclibdir=/usr/local/lib/lua/5.3/glink/
 
 installdir=/opt/glink/
-lualibdir=/opt/glink/
+lualibdir=/opt/glink/glink
 cclibdir=/opt/glink/

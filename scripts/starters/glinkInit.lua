@@ -2,10 +2,12 @@ local _local_file = debug.getinfo(1).short_src
 local _n, _n, _local_directory = string.find(debug.getinfo(1).short_src, "^(.+/)[^/]+$")
 __directory = _local_directory
 
+package.path = "/opt/glink/?.lua;" .. package.path
+
 --unstandart extension
-dofile(__directory .. "/lib/copy.lua")
-dofile(__directory .. "/lib/getopt.lua")
-File = dofile(__directory .. "/classes/File.lua");
+require("glink.lib.copy")
+require("glink.getopt.lua")
+File = require("glink.classes.File");
 
 OPTS = getopt( arg, "" )
 
