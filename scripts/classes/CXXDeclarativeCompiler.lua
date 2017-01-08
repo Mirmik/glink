@@ -564,6 +564,7 @@ function CXXDeclarativeCompiler:needToRecompile(objfile, depfile, modmtime, weak
 	
 	for i = 2, #arr do 
 		local file = self.fileCache:getFile(arr[i]);
+		if file.exists == false then return true end
 		if file.mtime > maxtime then maxtime = file.mtime end
 	end
 	
