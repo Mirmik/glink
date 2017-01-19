@@ -44,8 +44,9 @@ function pathops.resolve(base, path)
 end
 
 function pathops.dirname(path)
-	path = path:gsub('[^/]+/*$', '');
-	return path
+    retpath = path:gsub('[^/]+/*$', '');
+    if (retpath == path) then retpath = "./" end
+    return retpath
 end
 
 function pathops.isAbsolute(path)

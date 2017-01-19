@@ -6,9 +6,9 @@ __directory = _current_directory
 --require("/lib/copy")
 --require("/lib/getopt")
 require("glink.lib.copy")
-require("glink.lib.getopt")
+require("glink.lib.getargs")
 
-OPTS = getopt( arg, "j" )
+OPTS = getargs( arg, "j" )
 --print(table.tostring(OPTS))
 
 GlinkGlobal = require("glink.classes.GlinkGlobal")
@@ -33,13 +33,19 @@ script:evalFile("./glink.lua", {
 	OPTS = OPTS,
 	print = print,
 	error = error,
+	require = require,
 	table = table,
 	os = os,
 	script = script,
 
 	ScriptMachine = ScriptMachine,
 	CXXDeclarativeCompiler = CXXDeclarativeCompiler,
+	CXXDeclarativeRuller = require("glink.classes.CXXDeclarativeRuller"),
 	ModuleLibrary = ModuleLibrary,
+	
+	TaskTree = require("glink.classes.TaskTree"),
+	TaskStruct = require("glink.classes.TaskStruct"),
+	StraightExecutor = require("glink.classes.StraightExecutor"),
 
 	pathops = require("glink.lib.pathops"),
 	ruleops = require("glink.lib.ruleops"),

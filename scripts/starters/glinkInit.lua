@@ -6,10 +6,10 @@ package.path = "/opt/glink/?.lua;" .. package.path
 
 --unstandart extension
 require("glink.lib.copy")
-require("glink.lib.getopt")
+require("glink.lib.getargs")
 File = require("glink.classes.File");
 
-OPTS = getopt( arg, "" )
+OPTS = getargs( arg, "" )
 
 if OPTS["local"] == true then
 	os.execute(__directory .. "/tools/copyToLocal.sh")

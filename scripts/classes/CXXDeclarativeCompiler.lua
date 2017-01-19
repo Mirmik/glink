@@ -23,9 +23,6 @@ function CXXDeclarativeCompiler:new(args)
 	--assert(args.buildutils.AR, "Need AR property in buildutils");
 	--assert(args.buildutils.OBJDUMP, "Need OBJDUMP property in buildutils");
 	
-	--Set default builddir if needed.
-	compiler.builddir = args.builddir and args.builddir or os.getenv("PWD")
-	
 	--//We use FileCache as file operations manager.
 	compiler.fileCache = FileCache:new()
 
@@ -79,8 +76,9 @@ function CXXDeclarativeCompiler:standartArgsRoutine(OPTS)
 
 	if (OPTS[1]) then
 		if OPTS[1] == "clean" then
-			self:cleanBuildDirectory()
-			os.exit(0)
+			--self:cleanBuildDirectory()
+			self.clean = true;
+			--os.exit(0)
 		elseif OPTS[1] == "rebuild" then
 			self.forceRebuild = true 
 		--elseif OPTS[1] == "install" then
@@ -210,18 +208,18 @@ end
 --BUILD DIRECTORY OPERATIONS
 
 --Create build directory if needed
-function CXXDeclarativeCompiler:updateBuildDirectory() 
-	recursiveMkdir(self.builddir);
+function CXXDeclarativeCompiler:updateDirectory(dir) 
+	recursiveMkdir(dir);
 end
 
 --/*Unlink all files in build directory*/
-function CXXDeclarativeCompiler:cleanBuildDirectory()
-	if (not lfs.attributes(self.builddir)) then return end
-	for file in lfs.dir(self.builddir) do
+function CXXDeclarativeCompiler:cleanDirectory(dir)
+	if (not lfs.attributes(dir)) then return end
+	for file in lfs.dir(dir) do
 		if(not (file == "." or file == "..")) then  
 			if self.info == "debug" then
 			end
-			os.remove(pathops.resolve(self.builddir, file))
+			os.remove(pathops.resolve(dir, file))
 		end
 	end
 end
@@ -261,7 +259,6 @@ function CXXDeclarativeCompiler:resolveODRule(protorules, opts)
 	ret.cc_dep_rule = ruleops.substitute(protorules.cc_dep_rule, {__options__= cc_options});
 	ret.cxx_rule = ruleops.substitute(protorules.cxx_rule, {__options__= cxx_options});
 	ret.cxx_dep_rule = ruleops.substitute(protorules.cxx_dep_rule, {__options__= cxx_options});
-
 	ret.fortran_rule = ruleops.substitute(protorules.fortran_rule, {__fortran_options__= fortran_options});
 	ret.fortran_dep_rule = ruleops.substitute(protorules.fortran_dep_rule, {__fortran_options__= fortran_options});
 
@@ -370,6 +367,9 @@ function CXXDeclarativeCompiler:prepareModuleArray(mod, addopts)
 		--Resolve opts struct. It contains opts: parent, module, added
 		mod.__opts = __helper_resolveOptions3(parentopts, mod:getOpts(), addopts)
 		mod.__odRules = self:resolveODRule(self.rules, mod.__opts) 
+
+		assert(mod.__opts.builddir)
+		self:updateDirectory(mod.__opts.builddir)
 
 		--/*We need submodule's field for tree organization*/
 		mod.__submods = {}
@@ -571,10 +571,11 @@ function CXXDeclarativeCompiler:needToRecompile(objfile, depfile, modmtime, weak
 	return maxtime > depfile.mtime
 end
 
-function CXXDeclarativeCompiler:objectUpdate (path, deprule, objrule, modmtime, weak)
+function CXXDeclarativeCompiler:objectUpdate (path, deprule, objrule, modmtime, weak, dir)
+	assert(dir)
 	local sourcefile = self.fileCache:getFile(path);
-	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
-	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
+	local objectfile = self.fileCache:getFile(dir .. "/" .. util.base64_encode(path) .. ".o");
+	local dependfile = self.fileCache:getFile(dir .. "/" .. util.base64_encode(path) .. ".d");
 
 	if (self:needToRecompile(objectfile, dependfile, modmtime, weak)) then
 		self:objectCreate(sourcefile, objectfile, dependfile, objrule, deprule);
@@ -592,26 +593,26 @@ function CXXDeclarativeCompiler:__updateModObjects(mod)
 
 	if sources.s then
 		for i = 1, #sources.s do
-			objects[#objects + 1] = self:objectUpdate(sources.s[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectUpdate(sources.s[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
 	if sources.cc then
 		for i = 1, #sources.cc do
-			objects[#objects + 1] = self:objectUpdate(sources.cc[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectUpdate(sources.cc[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
 	if sources.cxx then
 		for i = 1, #sources.cxx do
-			objects[#objects + 1] = self:objectUpdate(sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectUpdate(sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
 	if sources.fortran then
 		for i = 1, #sources.fortran do
 			--print(sources.fortran[i])
-			objects[#objects + 1] = self:objectUpdate(sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectUpdate(sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
@@ -632,6 +633,13 @@ function CXXDeclarativeCompiler:assembleModuleStraight (name, addopts)
 	--Function returns module array, that ready to compile operation.*/
 	local modarray = self:prepareModuleArray(mod, addopts)
 	
+		if self.clean then 
+		for i = 1, #modarray do
+			self:cleanDirectory(modarray[i].__opts.builddir)
+		end
+		return
+	end
+
 	--//Check depends of modules.
 	self:checkModuleArrayDepends(modarray);
 	self:checkModuleArrayOptions(modarray);
@@ -654,10 +662,11 @@ function CXXDeclarativeCompiler:assembleModuleStraight (name, addopts)
 	return ret;
 end
 
-function CXXDeclarativeCompiler:objectTask (path, deprule, objrule, modmtime, weak)
+function CXXDeclarativeCompiler:objectTask (path, deprule, objrule, modmtime, weak, dir)
+	assert(dir)
 	local sourcefile = self.fileCache:getFile(path);
-	local objectfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".o");
-	local dependfile = self.fileCache:getFile(self.builddir .. "/" .. util.base64_encode(path) .. ".d");
+	local objectfile = self.fileCache:getFile(dir .. "/" .. util.base64_encode(path) .. ".o");
+	local dependfile = self.fileCache:getFile(dir .. "/" .. util.base64_encode(path) .. ".d");
 
 	local task = {
 		sourcefile = sourcefile,
@@ -687,25 +696,25 @@ function CXXDeclarativeCompiler:objectTasks(mod)
 
 	if sources.s then
 		for i = 1, #sources.s do
-			objects[#objects + 1] = self:objectTask(sources.s[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectTask(sources.s[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
 	if sources.cc then
 		for i = 1, #sources.cc do
-			objects[#objects + 1] = self:objectTask(sources.cc[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectTask(sources.cc[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
 	if sources.cxx then
 		for i = 1, #sources.cxx do
-			objects[#objects + 1] = self:objectTask(sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectTask(sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
 	if sources.fortran then
 		for i = 1, #sources.fortran do
-			objects[#objects + 1] = self:objectTask(sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak)
+			objects[#objects + 1] = self:objectTask(sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak, mod.__opts.builddir)
 		end
 	end
 
@@ -749,6 +758,13 @@ function CXXDeclarativeCompiler:assembleModuleParallel (name, addopts)
 	--Function returns module array, that ready to compile operation.*/
 	local modarray = self:prepareModuleArray(mod, addopts)
 	
+	if self.clean then 
+		for i = 1, #modarray do
+			self:cleanDirectory(modarray[i].__opts.builddir)
+		end
+		return true
+	end
+
 	--//Check depends of modules.
 	self:checkModuleArrayDepends(modarray);
 	self:checkModuleArrayOptions(modarray);

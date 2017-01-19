@@ -11,7 +11,7 @@
 -- note POSIX demands the parser ends at the first non option
 --      this behavior isn't implemented.
 
-function getopt( arg, options )
+function getargs( arg, options )
 	local tab = {}
 	for k, v in ipairs(arg) do
 		if string.sub( v, 1, 2) == "--" then
