@@ -6,7 +6,6 @@ ruller = CXXDeclarativeRuller.new{
 	},
 	builddir = "./build",
 }
-ruller:useOPTS(_ENV.OPTS)
 
 Module("main", {
 	sources = {
@@ -14,7 +13,7 @@ Module("main", {
 	},
 })
 
-local ret = ruller:assemble("main", {
+local ret = ruller:standartAssemble("main", {
 	target = "helloworld",
 	targetdir = "./",
 	assembletype = "application"

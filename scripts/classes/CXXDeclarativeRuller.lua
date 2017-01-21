@@ -445,7 +445,8 @@ function CXXDeclarativeRuller:makeTaskTree(name, addops)
 	return taskTree
 end
 
-function CXXDeclarativeRuller:assemble( name, addopts )
+function CXXDeclarativeRuller:standartAssemble( name, addopts )
+	self:useOPTS(_ENV.OPTS)
 	local executor = StraightExecutor.new()
 	executor:useOPTS(_ENV.OPTS)
 	return executor:execute(self:makeTaskTree(name, addopts))
