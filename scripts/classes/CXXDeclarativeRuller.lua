@@ -13,6 +13,7 @@ function CXXDeclarativeRuller.new(args)
 
 	--построение таблицы опций для optops
 	ruller.optionsTable = {
+		__name__ = {otype = "string"},
 		buildutils = {otype = "table", table = {
 			CC = { otype = "string", merge = optops.f_nilMerge },
 			CXX = { otype = "string", merge = optops.f_nilMerge },
@@ -28,11 +29,12 @@ function CXXDeclarativeRuller.new(args)
 		includePaths = {otype = "array", default = {}, paths = true},
 		ldscripts = {otype = "array", paths = true, default = {}},
 		defines = {otype = "array", default = {}},
+		depends = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge},
 		libs = {otype = "array", default = {}},
 		modules = {otype = "array"},
 		includeModules = {otype = "array"},
 		
-		optimization = {otype = "string", default = ""},
+		optimization = {otype = "string"},
 		builddir = {otype = "string"},
 		
 		targetdir = {otype = "string", merge = optops.f_changeMerge, include = optops.f_noMerge},
@@ -40,8 +42,8 @@ function CXXDeclarativeRuller.new(args)
 		assembletype = {otype = "string", default = "objects", merge = optops.f_changeMerge, include = optops.f_noMerge},
 	
 		standart = {otype = "table", table = {
-			cc = {otype = "string", default = ""},
-			cxx = {otype = "string", default = ""},			
+			cc = {otype = "string"},
+			cxx = {otype = "string"},			
 		}},
 	
 		flags = {otype = "table", table = {
@@ -174,7 +176,7 @@ function CXXDeclarativeRuller:objectTasks(taskTree, mod)
 	local __need
 	local need = false
  
-	function f(arr, deprule, ccrule) 
+	local function f(arr, deprule, ccrule) 
 		if arr then
 			for i = 1, #arr do
 				object, __need = self:objectTask(taskTree, arr[i], deprule, ccrule, mod:getMtime(), weak, mod.__opts.builddir)
@@ -198,7 +200,9 @@ function CXXDeclarativeRuller:linkTask(taskTree, mod, parts, need)
 	local targetdir = mod.__opts.targetdir and mod.__opts.targetdir or mod.__opts.builddir
 	local message
 	target = pathops.resolve(targetdir, target)
+	
 	local ld_rule = mod.__odRules.ld_rule
+	ld_rule = ruleops.substitute(ld_rule, { objs = table.concat(parts, " "), tgt = target })
 	
 	if #parts == 0 then return {} end
 
@@ -211,7 +215,7 @@ function CXXDeclarativeRuller:linkTask(taskTree, mod, parts, need)
 
 	taskTree:addTask(target, {
 		{
-			rule = ruleops.substitute(ld_rule, { objs = table.concat(parts, " "), tgt = target }),
+			rule = ld_rule,
 			echo = false, message = message, noneed = not (need or needops.needToUpdateFile(target))
 		}
 	})
@@ -285,7 +289,7 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 			util.map(opts.ldscripts, function(file) return "-T" .. file end), 
 			" "
 		),
-		OPTIONS = table.concat(opts.flags.ld," "),
+		OPTIONS = table.concat(table.arrayConcat(opts.flags.ld, opts.flags.allcc)," "),
 		SHARED = opts.sharedLibrary and "-shared" or ""
 	})
 	
@@ -335,7 +339,7 @@ end
 function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts) 
 	optops.prepare(addopts, self.optionsTable)
 
-	function f(mod, addopts, rootopts)
+	local function f(mod, addopts, rootopts)
 		--get module from library.
 		local _opts = table.deep_copy(rootopts)
 
@@ -375,7 +379,7 @@ function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts)
 end
 
 function CXXDeclarativeRuller:makeCleanTaskTree(taskTree, mod) 
-	function f(mod)
+	local function f(mod)
 		local directories = {}
 	
 		--Submodules should be resolved early
@@ -392,8 +396,8 @@ end
 
 
 function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod) 
-	function f(mod)
-		local objects, needobj, __needres, __results, need
+	local function f(mod)
+		local objects, needobj, __needres, __results, need		
 		
 		if not mod.__opts.builddir then error(text.red("builddir should be declared")) end
 		self:updateDirectoryTask(taskTree, mod.__opts.builddir)
@@ -403,13 +407,14 @@ function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod)
 		local needres = false
 		for index, sub in ipairs(mod.__submods) do
 			__results, __needres = f(sub)
+
 			results = table.arrayConcat(results, __results)
 			needres = __needres or needres
 		end
 
 		objects, needobj = self:objectTasks(taskTree, mod)
 		need = needobj or needres		
-
+		
 		if mod.__opts.assembletype == "objects" then 
 			return table.arrayConcat(objects, results), need
 		
@@ -417,7 +422,7 @@ function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod)
 			local parts = table.arrayConcat(objects, results)
 			if not mod.__opts.targetdir then error(text.red("targetdir should be declared")) end
 			self:updateDirectoryTask(taskTree, mod.__opts.targetdir)
-			return self:linkTask(taskTree, mod, objects, need), need
+			return self:linkTask(taskTree, mod, parts, need), need
 
 		elseif mod.__opts.assembletype == "static" then error("STA")
 		

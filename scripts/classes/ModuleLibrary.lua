@@ -32,6 +32,7 @@ end
 
 function ModuleLibrary:addModule(Mod) 
 	self:moduleInternalRoutine(Mod);
+	
 	if (self.moduleList[Mod.name]) then
 		print(text.red("ModuleClass's name conflict: ") .. text.yellow(Mod.name)) 
 		print("Early it was defined in\t\t" .. text.yellow(self.moduleList[Mod.name].moduleFile))

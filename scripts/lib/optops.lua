@@ -65,7 +65,7 @@ function optops.prepare(opts, metatbl)
 		for key, opt in pairs(opts) do
 			local proto = metatbl[key]
 			if proto == nil then
-				print("Wrong property name " .. text.red(key))
+				print("Wrong property name " .. text.red(key) .. " in module " .. text.red(opts.__name__))
 				os.exit(-1)
 			end	
 		

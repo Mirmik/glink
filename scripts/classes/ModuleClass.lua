@@ -8,6 +8,7 @@ function ModuleClass:new(name, mod)
 	Mod.name = name
 	Mod.mod = mod	
 	Mod.type = "simple" 
+	Mod.mod.__name__ = name
 
 	return Mod
 end
