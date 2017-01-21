@@ -48,10 +48,10 @@ function CXXDeclarativeRuller.new(args)
 		}},
 	
 		flags = {otype = "table", table = {
-			cc = {otype = "array", default = {}},
-			cxx = {otype = "array", default = {}},
-			ld = {otype = "array", default = {}},
-			allcc = {otype = "array", default = {}}		
+			cc = {otype = "array", merge = optops.f_changeWeakMerge, },
+			cxx = {otype = "array", merge = optops.f_changeWeakMerge,},
+			ld = {otype = "array", merge = optops.f_changeWeakMerge,},
+			allcc = {otype = "array", merge = optops.f_changeWeakMerge,}		
 		}}
 	}
 
@@ -291,9 +291,12 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 			" "
 		),
 		OPTIONS = table.concat(table.arrayConcat(opts.flags.ld, opts.flags.allcc)," "),
-		SHARED = opts.sharedLibrary and "-shared" or ""
+		SHARED = ""
 	})
+	if opts.assembletype == "static" then SHARED = "-static" end 
+	if opts.assembletype == "dynamic" then SHARED = "-shared" end 
 	
+
 	local ret = {};
 	ret.cc_rule = ruleops.substitute(protorules.cc_rule, {__options__= cc_options});
 	ret.cc_dep_rule = ruleops.substitute(protorules.cc_dep_rule, {__options__= cc_options});
@@ -419,16 +422,15 @@ function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod)
 		if mod.__opts.assembletype == "objects" then 
 			return table.arrayConcat(objects, results), need
 		
-		elseif mod.__opts.assembletype == "application" then 
+		elseif 	mod.__opts.assembletype == "application" or 
+				mod.__opts.assembletype == "static" or 
+				mod.__opts.assembletype == "dynamic" then 
 			local parts = table.arrayConcat(objects, results)
 			if not mod.__opts.targetdir then error(text.red("targetdir should be declared")) end
 			self:updateDirectoryTask(taskTree, mod.__opts.targetdir)
 			return self:linkTask(taskTree, mod, parts, need), need
-
-		elseif mod.__opts.assembletype == "static" then error("STA")
-		
-		elseif mod.__opts.assembletype == "dinamic" then error("STA")
-		
+		else
+			error("unresolved type of assemble")
 		end
 	end
 	

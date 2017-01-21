@@ -7,7 +7,7 @@ ruller = CXXDeclarativeRuller.new{
 		CC = "arm-none-eabi-gcc", 
 		LD = "arm-none-eabi-ld", 
 	},
-	--weakRecompile = "noscript",
+	weakRecompile = "noscript",
 	optimization = "-O2",
 	standart = {
 		cxx = "-std=gnu++11",
@@ -45,7 +45,9 @@ Module("main", {
 })
 
 local ret = ruller:standartAssemble("main", {
-	target = "genos"
+	target = "genos",
+	targetdir = ".",
+	assembletype = "application"
 })
 
 if not ret then print(text.yellow("Nothing to do")) end 
