@@ -260,12 +260,12 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 
 	local cc_options = ruleops.substitute(tempoptions, {
 		STANDART = opts.standart.cc,
-		OPTIONS = table.concat(opts.flags.cc," "),
+		OPTIONS = table.concat(table.arrayConcat(opts.flags.cc, opts.flags.allcc)," "),
 	})
 
 	local cxx_options = ruleops.substitute(tempoptions, {
 		STANDART = opts.standart.cxx,
-		OPTIONS = table.concat(opts.flags.cxx," "),
+		OPTIONS = table.concat(table.arrayConcat(opts.flags.cxx, opts.flags.allcc)," "),
 	})
 
 	local fortran_options = ruleops.substitute(protorules.__fortran_options__, {
