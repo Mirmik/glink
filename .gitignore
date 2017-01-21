@@ -1,3 +1,4 @@
 generic/sharedlibs/*
 generic/download/*
 *.o
+*.d
