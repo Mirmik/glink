@@ -5,6 +5,6 @@ generic/download/*
 *.elf
 
 templates/*
-!templates/*.lua
-!templates/*.cpp
-!templates/*.c
+!templates/**.lua
+!templates/**.cpp
+!templates/**.c
