@@ -65,7 +65,7 @@ function optops.prepare(opts, metatbl)
 		for key, opt in pairs(opts) do
 			local proto = metatbl[key]
 			if proto == nil then
-				print("Wrong property name " .. text.red(key) .. " in module " .. text.red(opts.__name__))
+				print("Wrong property name " .. text.red(key) .. " in " .. (opts.__name__ and text.red(opts.__name__) or "NOMODULE"))
 				os.exit(-1)
 			end	
 		
@@ -123,7 +123,7 @@ function optops.restorePaths(tbl, meta, basedir)
 		else
 			if proto.paths and tbl[key] then	
 				for index, path in ipairs(tbl[key]) do
-					tbl[key][index] = pathops.resolve(basedir, path)
+					tbl[key][index] = pathops.isAbsolute(path) and path or pathops.resolve(basedir, path)
 				end
 			end
 		end

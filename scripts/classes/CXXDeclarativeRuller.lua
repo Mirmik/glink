@@ -36,6 +36,7 @@ function CXXDeclarativeRuller.new(args)
 		
 		optimization = {otype = "string"},
 		builddir = {otype = "string"},
+		weakRecompile = {otype = "string"},
 		
 		targetdir = {otype = "string", merge = optops.f_changeMerge, include = optops.f_noMerge},
 		target = {otype = "string", merge = optops.f_changeMerge, include = optops.f_noMerge},

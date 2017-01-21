@@ -1,0 +1,1 @@
+CXXDeclarativeRuller - вернуть в кондицию depends.
