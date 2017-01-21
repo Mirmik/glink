@@ -3,8 +3,3 @@ generic/download/*
 *.o
 *.d
 *.elf
-
-templates/*
-!templates/**.lua
-!templates/**.cpp
-!templates/**.c
