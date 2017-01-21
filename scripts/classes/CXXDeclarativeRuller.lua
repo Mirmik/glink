@@ -5,6 +5,7 @@ optops = require("glink.lib.optops")
 ruleops = require("glink.lib.ruleops")
 needops = require("glink.lib.needops")
 TaskTree = require("glink.classes.TaskTree")
+StraightExecutor = require("glink.classes.StraightExecutor")
 
 function CXXDeclarativeRuller.new(args) 
 	local ruller = {}
@@ -24,14 +25,14 @@ function CXXDeclarativeRuller.new(args)
 			s = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = true}		
 		}},
 		
-		includePaths = {otype = "array", paths = true},
+		includePaths = {otype = "array", default = {}, paths = true},
 		ldscripts = {otype = "array", paths = true, default = {}},
 		defines = {otype = "array", default = {}},
 		libs = {otype = "array", default = {}},
 		modules = {otype = "array"},
 		includeModules = {otype = "array"},
 		
-		optimization = {otype = "string"},
+		optimization = {otype = "string", default = ""},
 		builddir = {otype = "string"},
 		
 		targetdir = {otype = "string", merge = optops.f_changeMerge, include = optops.f_noMerge},
@@ -39,15 +40,15 @@ function CXXDeclarativeRuller.new(args)
 		assembletype = {otype = "string", default = "objects", merge = optops.f_changeMerge, include = optops.f_noMerge},
 	
 		standart = {otype = "table", table = {
-			cc = {otype = "string"},
-			cxx = {otype = "string"},			
+			cc = {otype = "string", default = ""},
+			cxx = {otype = "string", default = ""},			
 		}},
 	
 		flags = {otype = "table", table = {
-			cc = {otype = "array"},
-			cxx = {otype = "array"},
-			ld = {otype = "array"},
-			allcc = {otype = "array"}		
+			cc = {otype = "array", default = {}},
+			cxx = {otype = "array", default = {}},
+			ld = {otype = "array", default = {}},
+			allcc = {otype = "array", default = {}}		
 		}}
 	}
 
@@ -115,8 +116,6 @@ end
 
 --Create build directory if needed
 function CXXDeclarativeRuller:updateDirectoryTask(taskTree, dir)
-	assert(dir)
-
 	local mkdirrule = "mkdir -p "..dir
 
 	if self.info == "debug" then
@@ -251,7 +250,10 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 
 	local tempoptions = ruleops.substitute(protorules.__options__, {
 		OPTIMIZATION = opts.optimization,
-		DEFINES = table.concat(opts.defines," "),
+		DEFINES = table.concat(	
+			util.map(opts.defines, function(file) return "-D" .. file end), 
+			" "
+		),
 		INCLUDE = table.concat(
 			util.map(opts.includePaths, function(file) return "-I" .. file end), 
 			" "
@@ -393,6 +395,7 @@ function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod)
 	function f(mod)
 		local objects, needobj, __needres, __results, need
 		
+		if not mod.__opts.builddir then error(text.red("builddir should be declared")) end
 		self:updateDirectoryTask(taskTree, mod.__opts.builddir)
 		
 		--Submodules should be resolved early
@@ -412,6 +415,7 @@ function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod)
 		
 		elseif mod.__opts.assembletype == "application" then 
 			local parts = table.arrayConcat(objects, results)
+			if not mod.__opts.targetdir then error(text.red("targetdir should be declared")) end
 			self:updateDirectoryTask(taskTree, mod.__opts.targetdir)
 			return self:linkTask(taskTree, mod, objects, need), need
 
@@ -439,6 +443,12 @@ function CXXDeclarativeRuller:makeTaskTree(name, addops)
 	end
 
 	return taskTree
+end
+
+function CXXDeclarativeRuller:assemble( name, addopts )
+	local executor = StraightExecutor.new()
+	executor:useOPTS(_ENV.OPTS)
+	return executor:execute(self:makeTaskTree(name, addopts))
 end
 
 return CXXDeclarativeRuller
