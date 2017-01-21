@@ -3,3 +3,4 @@ generic/download/*
 *.o
 *.d
 *.elf
+**/target

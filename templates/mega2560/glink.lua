@@ -1,8 +1,5 @@
 print(text.green("Script Start"))
 
-local files = find.findInTree("../genos", ".*.gll$", ".*HIDE.*")
-script:evalFile(files, _ENV)
-
 ruller = CXXDeclarativeRuller.new{
 	buildutils = { 
 		CXX = "avr-g++", 
@@ -35,24 +32,14 @@ Module("main", {
 	includePaths = ".",
 	
 	modules = {
-		{name = "genos.dprint", impl = "diag"},
-		{name = "genos.diag", impl = "impl"},
-		{name = "genos.irqtbl"},
-		{name = "genos.arch.avr.head"},
-		{name = "genos.drivers.avr"},
-		{name = "genos.kernel.serial"},
---		{name = "genos.kernel.scheduler"}
 	},
 
 	includeModules = {
-		{name = "genos.include"},
-		{name = "genos.include.libc",},
-		{name = "genos.include.arch.atmega2560"},
 	},
 })
 
 local ret = ruller:standartAssemble("main", {
-	target = "target",
+	target = "genos",
 	targetdir = ".",
 	assembletype = "application"
 })
