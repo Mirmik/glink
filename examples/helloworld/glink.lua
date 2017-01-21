@@ -14,7 +14,7 @@ Module("main", {
 })
 
 local ret = ruller:standartAssemble("main", {
-	target = "helloworld",
+	target = "helloworld.elf",
 	targetdir = "./",
 	assembletype = "application"
 })

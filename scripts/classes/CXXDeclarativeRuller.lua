@@ -212,7 +212,7 @@ function CXXDeclarativeRuller:linkTask(taskTree, mod, parts, need)
 	taskTree:addTask(target, {
 		{
 			rule = ruleops.substitute(ld_rule, { objs = table.concat(parts, " "), tgt = target }),
-			echo = false, message = message, noneed = not need
+			echo = false, message = message, noneed = not (need or needops.needToUpdateFile(target))
 		}
 	})
 

@@ -39,4 +39,10 @@ function needops.needToUpdateDirectory(dir)
 	return not fileCache:getFile(dir).exists 
 end
 
+
+function needops.needToUpdateFile(path)
+	local fileCache = GlinkGlobal.globalFileCache
+	return not fileCache:getFile(path).exists 
+end
+
 return needops
