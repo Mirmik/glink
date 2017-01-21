@@ -337,7 +337,7 @@ function CXXDeclarativeCompiler:moduleTreeToArray (mod)
 	local array = {}
 	array[1] = mod
 
-	function f(mod) 
+	local function f(mod) 
 		for i = 1, #mod.__submods do 
 			local sub = mod.__submods[i]
 			array[#array + 1] = sub;
