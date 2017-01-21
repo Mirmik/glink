@@ -5,7 +5,6 @@ generic/download/*
 *.elf
 
 templates/*
-!templates/*
-!templates/*/glink.lua
-!templates/*/*.cpp
-!templates/*/*.c
+!templates/*.lua
+!templates/*.cpp
+!templates/*.c
