@@ -3,3 +3,8 @@ generic/download/*
 *.o
 *.d
 *.elf
+
+templates/*
+!templates/*/glink.lua
+!templates/*.cpp
+!templates/*.c
