@@ -3,6 +3,7 @@ CXXDeclarativeRuller.__index = CXXDeclarativeRuller
 
 optops = require("glink.lib.optops")
 ruleops = require("glink.lib.ruleops")
+needops = require("glink.lib.needops")
 TaskTree = require("glink.classes.TaskTree")
 
 function CXXDeclarativeRuller.new(args) 
@@ -76,18 +77,16 @@ function CXXDeclarativeRuller.new(args)
 
 	--We use global context as default.
 	ruller.mlib = GlinkGlobal.globalModuleLibrary;
+	
 	--//We use FileCache as file operations manager.
-	ruller.fileCache = FileCache:new()
+	ruller.fileCache = GlinkGlobal.globalFileCache;
+
+--	ruller:useOPTS(_ENV.OPTS)
 
 	return ruller	
 end
 
-
-function CXXDeclarativeRuller:standartArgsRoutine(OPTS)  	
-	--if (OPTS.j) then
-	--	self.parallel = OPTS.j
-	--end
-	
+function CXXDeclarativeRuller:useOPTS(OPTS)  	
 	OPTS.silent = OPTS.silent and OPTS.silent or OPTS.s
 	OPTS.debug = OPTS.debug and OPTS.debug or OPTS.d
 
@@ -105,119 +104,145 @@ function CXXDeclarativeRuller:standartArgsRoutine(OPTS)
 
 	if (OPTS[1]) then
 		if OPTS[1] == "clean" then
-			--self:cleanBuildDirectory()
 			self.clean = true;
-			--os.exit(0)
 		elseif OPTS[1] == "rebuild" then
 			self.forceRebuild = true 
-		--elseif OPTS[1] == "install" then
-		--	os.execute("bash ./install.sh")
-		--	os.exit(0) 
 		else
 			error(text.red("Unresolved Parametr ") .. text.yellow(OPTS[1]))
 		end
 	end
 end
 
-function CXXDeclarativeRuller:needToRecompile(objfile, depfile, modmtime, weak)
-	if self.forceRebuild then return true end
-	if objfile.exists == false then return true end 
-	if depfile.exists == false then return true end 
-	if weak == "norecompile" then return false end
+--Create build directory if needed
+function CXXDeclarativeRuller:updateDirectoryTask(taskTree, dir)
+	assert(dir)
 
-	local file = assert(io.open(depfile.path, "r"))
-	local deptext = file:read("*a")
-	
-	if #deptext < 2 then return true end
+	local mkdirrule = "mkdir -p "..dir
 
-	local arr = {} 
-	for file in deptext:gmatch("[^ \n\\]+") do
-		arr[#arr + 1] = file
+	if self.info == "debug" then
+		message = mkdirrule .. "\r\n"
+	elseif self.info == "silent" then
+		message = nil
+	else
+		message = "MKDIR " .. dir 
 	end
 
-	local maxtime = (weak == "noscript") and 0 or modmtime
-	
-	for i = 2, #arr do 
-		local file = self.fileCache:getFile(arr[i]);
-		if file.exists == false then return true end
-		if file.mtime > maxtime then maxtime = file.mtime end
-	end
-	
-	return maxtime > depfile.mtime
+	if taskTree:contains(dir) then return end
+	taskTree:addTask(dir, {
+		{rule = mkdirrule, echo = false, message = message, noneed = not needops.needToUpdateDirectory(dir)},
+	})
 end
 
-function CXXDeclarativeRuller:objectTask (tasktree, path, deprule, objrule, modmtime, weak, dir)
-	assert(dir)
-	local sourcefile = self.fileCache:getFile(path);
-	local objectfile = self.fileCache:getFile(dir .. "/" .. util.base64_encode(path) .. ".o");
-	local dependfile = self.fileCache:getFile(dir .. "/" .. util.base64_encode(path) .. ".d");
+function CXXDeclarativeRuller:objectTask (taskTree, srcpath, deprule, objrule, modmtime, weak, builddir)
+	assert(builddir)
+	local objpath = builddir .. "/" .. util.base64_encode(srcpath) .. ".o"
+	local deppath = builddir .. "/" .. util.base64_encode(srcpath) .. ".d"
 
 	local task = nil
-	local objrule = ruleops.substitute(objrule, { src = sourcefile.path, tgt = objectfile.path })
-	local deprule = ruleops.substitute(deprule, { src = sourcefile.path, tgt = dependfile.path })
+	local objrule = ruleops.substitute(objrule, { src = srcpath, tgt = objpath })
+	local deprule = ruleops.substitute(deprule, { src = srcpath, tgt = deppath })
+
+	local message
+	local depmessage
 
 	if self.info == "debug" then
 		message = objrule .. "\r\n"
 	elseif self.info == "silent" then
 		message = nil
 	else
-		message = "OBJECT " .. sourcefile.path 
+		message = "OBJECT " .. srcpath 
 	end
 
-	local need = self:needToRecompile(objectfile, dependfile, modmtime, weak)
-	if need then 
-		tasktree:addTask(objectfile.path, {
-			{rule = objrule, echo = false, message = message},
-			{rule = deprule, echo = false},
-		})
-	end
-	
-	return objectfile.path, need;
+	depmessage = nil
+
+	local need = self.forceRebuild or needops.needToRecompile(objpath, deppath, modmtime, weak)
+
+	taskTree:addTask(objpath, {
+		{rule = objrule, echo = false, message = message, noneed = not need},
+		{rule = deprule, echo = false, message = depmessage, noneed = not need},
+	})
+
+	taskTree:addNext(builddir, objpath)
+
+	return objpath, need;
 end
 
-function CXXDeclarativeRuller:objectTasks(mod, tasktree)
+function CXXDeclarativeRuller:objectTasks(taskTree, mod)
 	local weak = mod.__opts.weakRecompile  
 	local sources = mod:getSources()
-	local tasks = {}
 	local objects = {}
-	local cobjects = {}
-	local compiled
-	local task
 	local object
-
-	if sources.s then
-		for i = 1, #sources.s do
-			object, compiled = self:objectTask(tasktree, sources.s[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak, mod.__opts.builddir)
-			if compiled then cobjects[#cobjects + 1] = object end
-			objects[#objects + 1] = object
+	local __need
+	local need = false
+ 
+	function f(arr, deprule, ccrule) 
+		if arr then
+			for i = 1, #arr do
+				object, __need = self:objectTask(taskTree, arr[i], deprule, ccrule, mod:getMtime(), weak, mod.__opts.builddir)
+				objects[#objects + 1] = object
+				need = need or __need
+			end
 		end
 	end
 
-	if sources.cc then
-		for i = 1, #sources.cc do
-			object, compiled = self:objectTask(tasktree, sources.cc[i], mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule, mod:getMtime(), weak, mod.__opts.builddir)
-			if compiled then cobjects[#cobjects + 1] = object end
-			objects[#objects + 1] = object
-		end
+	f(sources.s, mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule)
+	f(sources.cc, mod.__odRules.cc_dep_rule, mod.__odRules.cc_rule)
+	f(sources.cxx, mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule)
+	f(sources.fortran, mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule)
+
+	return objects, need;
+end
+
+
+function CXXDeclarativeRuller:linkTask(taskTree, mod, parts, need)
+	local target = mod.__opts.target and mod.__opts.target or mod.name
+	local targetdir = mod.__opts.targetdir and mod.__opts.targetdir or mod.__opts.builddir
+	local message
+	target = pathops.resolve(targetdir, target)
+	local ld_rule = mod.__odRules.ld_rule
+	
+	if #parts == 0 then return {} end
+
+	if self.info == "debug" then 
+		message = "LINK " .. ld_rule .. "\r\n"
+	elseif self.info == "silent" then
+	else
+		message = "LINK " .. target
 	end
 
-	if sources.cxx then
-		for i = 1, #sources.cxx do
-			object, compiled = self:objectTask(tasktree, sources.cxx[i], mod.__odRules.cxx_dep_rule, mod.__odRules.cxx_rule, mod:getMtime(), weak, mod.__opts.builddir)
-			if compiled then cobjects[#cobjects + 1] = object end
-			objects[#objects + 1] = object
-		end
+	taskTree:addTask(target, {
+		{
+			rule = ruleops.substitute(ld_rule, { objs = table.concat(parts, " "), tgt = target }),
+			echo = false, message = message, noneed = not need
+		}
+	})
+
+	taskTree:multiBasesNext(parts, target)
+	taskTree:addNext(targetdir, target)
+			
+	return {target} 
+end
+
+function CXXDeclarativeRuller:buildDirectoryDeleteTask(taskTree, mod)
+	local builddir = mod.__opts.builddir
+	local message
+	
+	local rmrule = "rm -f "..builddir.."/*.o "..builddir.."/*.d "
+	
+	if self.info == "debug" then 
+		message = "CLEAN " .. rmrule .. "\r\n"
+	elseif self.info == "silent" then
+	else
+		message = "CLEAN " .. builddir
 	end
 
-	if sources.fortran then
-		for i = 1, #sources.fortran do
-			object, compiled = self:objectTask(tasktree, sources.fortran[i], mod.__odRules.fortran_dep_rule, mod.__odRules.fortran_rule, mod:getMtime(), weak, mod.__opts.builddir)
-			if compiled then cobjects[#cobjects + 1] = object end
-			objects[#objects + 1] = object
-		end
+	if not taskTree:contains(builddir) then
+		taskTree:addTask(builddir, {
+			{rule = rmrule, echo = false, message = message}
+		})
 	end
-
-	return objects, cobjects;
+			
+	return builddir 
 end
 
 --RULES OPERATIONS
@@ -305,25 +330,16 @@ function CXXDeclarativeRuller:resolveIncludeModules(mod)
 	mod.mod.includeModules = nil;
 end
 
---Create build directory if needed
-function CXXDeclarativeRuller:updateDirectory(dir) 
-	recursiveMkdir(dir);
-end
-
-function CXXDeclarativeRuller:evaluateTasks(name, addopts) 
-	local tasktree = TaskTree.new()
-
+function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts) 
 	optops.prepare(addopts, self.optionsTable)
+
 	function f(mod, addopts, rootopts)
 		--get module from library.
 		local _opts = table.deep_copy(rootopts)
 
 		--resolve module opts
 		optops.prepare(mod.mod, self.optionsTable)
-		--print(table.tostring(mod.mod))
 		optops.merge(mod.mod, addopts, self.optionsTable, "add")
-		--print(table.tostring(addopts))
-		--print(table.tostring(mod.mod))
 		optops.restorePaths(mod.mod, self.optionsTable, mod.moduleDirectory)
 		self:resolveIncludeModules(mod)
 		optops.merge(_opts, mod.mod, self.optionsTable)
@@ -331,44 +347,73 @@ function CXXDeclarativeRuller:evaluateTasks(name, addopts)
 		mod.__opts = _opts
 		mod.__odRules = self:resolveODRule(self.rules, mod.__opts) 
 	
-		assert(mod.__opts.builddir)
-		self:updateDirectory(mod.__opts.builddir)
-
 		--/*We need submodule's field for tree organization*/
 		mod.__submods = {}
-		if (not mod:getModules()) then return end
+		
+		local modules = mod:getModules()
+		if (not modules) then return end
 
 		--If mod have submodules, foreach
-		local modules = mod:getModules()
-
-		local results = {}
-		local compiled = {}
-		
 		for i = 1, #modules do
 			local subrec = modules[i]
 			--get submodule from library
 			local sub = self.mlib:resolveSubmod(subrec);
-			--add to submodules field.
-			mod.__submods[i] = sub
 			subrec.opts = subrec.opts and subrec.opts or {}
 			optops.prepare(subrec.opts, self.optionsTable)
+		
 			--use Worker on it.
-			__results, __compiled = f(sub, subrec.opts, mod.__opts)
-			results = table.arrayConcat(results, __results)
-			compiled = table.arrayConcat(compiled, __compiled)
+			f(sub, subrec.opts, mod.__opts)
+
+			--save link in submods table
+			mod.__submods[i] = sub
+		end
+	end
+
+	f(rootmod, addopts, self.opts) 
+end
+
+function CXXDeclarativeRuller:makeCleanTaskTree(taskTree, mod) 
+	function f(mod)
+		local directories = {}
+	
+		--Submodules should be resolved early
+		for index, sub in ipairs(mod.__submods) do
+			__directories = f(sub)
+			directories = table.arrayConcat(directories, __directories)
 		end
 
-		local objects
-		local cobjects
-		objects, cobjects = self:objectTasks(mod, tasktree)
+		return self:buildDirectoryDeleteTask(taskTree, mod)
+	end
+	
+	return f(mod)
+end
+
+
+function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod) 
+	function f(mod)
+		local objects, needobj, __needres, __results, need
 		
+		self:updateDirectoryTask(taskTree, mod.__opts.builddir)
+		
+		--Submodules should be resolved early
+		local results = {}
+		local needres = false
+		for index, sub in ipairs(mod.__submods) do
+			__results, __needres = f(sub)
+			results = table.arrayConcat(results, __results)
+			needres = __needres or needres
+		end
+
+		objects, needobj = self:objectTasks(taskTree, mod)
+		need = needobj or needres		
+
 		if mod.__opts.assembletype == "objects" then 
-			return table.arrayConcat(objects, results), table.arrayConcat(cobjects, compiled) 
+			return table.arrayConcat(objects, results), need
 		
 		elseif mod.__opts.assembletype == "application" then 
 			local parts = table.arrayConcat(objects, results)
-			local cparts = table.arrayConcat(cobjects, compiled)
-			return self:linkTask(tasktree, mod, parts, cparts)
+			self:updateDirectoryTask(taskTree, mod.__opts.targetdir)
+			return self:linkTask(taskTree, mod, objects, need), need
 
 		elseif mod.__opts.assembletype == "static" then error("STA")
 		
@@ -376,33 +421,24 @@ function CXXDeclarativeRuller:evaluateTasks(name, addopts)
 		
 		end
 	end
-	local mod = self.mlib:getModule(name)
-	results = f(mod, addopts, self.opts) 
-	return tasktree, results
+	
+	results = f(mod) 
+	return taskTree, results
 end
 
-function CXXDeclarativeRuller:linkTask(tasktree, mod, parts, cparts)
-	local target = mod.__opts.target and mod.__opts.target or mod.name
-	local targetdir = mod.__opts.targetdir and mod.__opts.targetdir or mod.__opts.builddir
-	local message
-	target = pathops.resolve(targetdir, target)
-	local ld_rule = mod.__odRules.ld_rule
-	
-	if #cparts == 0 then return {} end
+function CXXDeclarativeRuller:makeTaskTree(name, addops) 
+	local mod = self.mlib:getModule(name)
+	self:prepareModuleTree(mod, addops)
 
-	if self.info == "debug" then 
-		message = "LINK " .. ld_rule .. "\r\n"
-	elseif self.info == "silent" then
+	local taskTree = TaskTree.new()
+
+	if self.clean == true then
+		self:makeCleanTaskTree(taskTree, mod)
 	else
-		message = "LINK " .. target
+		self:makeAssembleTaskTree(taskTree, mod)
 	end
 
-	tasktree:addTask(target, {
-		{rule = ruleops.substitute(ld_rule, { objs = table.concat(parts, " "), tgt = target }),echo = false, message = message}
-	})
-			
-	for index, part in ipairs(cparts) do tasktree:addNext(part, target) end
-	return {target} 
+	return taskTree
 end
 
 return CXXDeclarativeRuller

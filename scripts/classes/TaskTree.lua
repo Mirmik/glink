@@ -17,8 +17,7 @@ end
 function TaskTree:getTask(target)
 	local ret = self.tasks[target]
 	if not ret then
-		print("TaskTree::getTask error: " .. text.red(target))
-		os.exit(-1)
+		error("TaskTree::getTask error: " .. text.red(target))
 	end  
 	return ret
 end
@@ -80,6 +79,10 @@ end
 function TaskTree:addNext(base, next)
 	tbase = self:getTask(base)
 	tbase:addNext(next)
+end
+
+function TaskTree:multiBasesNext (bases, next)
+	for index, base in ipairs(bases) do self:addNext(base, next) end
 end
 
 function TaskTree:printTree() 

@@ -28,6 +28,7 @@ local script = ScriptMachine:new()
 local mlib = ModuleLibrary:new(script)
 
 GlinkGlobal.globalModuleLibrary = mlib
+GlinkGlobal.globalFileCache = FileCache.new()
 
 script:evalFile("./glink.lua", {
 	OPTS = OPTS,
@@ -51,6 +52,7 @@ script:evalFile("./glink.lua", {
 	ruleops = require("glink.lib.ruleops"),
 	text = require("glink.lib.text"),
 	find = require("glink.lib.find"),
+	needops = require("glink.lib.needops"),
 
 	Module = GlinkGlobal.Module,
 	Implementation = GlinkGlobal.Implementation,

@@ -24,7 +24,7 @@ function CXXDeclarativeCompiler:new(args)
 	--assert(args.buildutils.OBJDUMP, "Need OBJDUMP property in buildutils");
 	
 	--//We use FileCache as file operations manager.
-	compiler.fileCache = FileCache:new()
+	compiler.fileCache = FileCache.new()
 
 
 	if (not compiler.opts.optimization) then compiler.opts.optimization = "-O2" end

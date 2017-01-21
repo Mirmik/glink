@@ -5,9 +5,9 @@ local pathops = require("glink.lib.pathops")
 local FileCache = {}
 FileCache.__index = FileCache
 
-function FileCache:new()
+function FileCache.new()
 	local fcache = {}
-	setmetatable(fcache, self)
+	setmetatable(fcache, FileCache)
 
 	fcache.cache = {}
 
