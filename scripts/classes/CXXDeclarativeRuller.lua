@@ -21,9 +21,10 @@ function CXXDeclarativeRuller.new(args)
 		}},
 	
 		sources = {otype = "table", table = {
-			cc = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = true},
-			cxx = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = true},
-			s = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = true}		
+			directory = { otype = "string", merge = optops.f_changeMerge, add = optops.f_changeWeakMerge, include = optops.f_noMerge }, 
+			cc = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = "directory"},
+			cxx = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = "directory"},
+			s = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge, paths = "directory"}		
 		}},
 		
 		includePaths = {otype = "array", default = {}, paths = true},
@@ -31,8 +32,8 @@ function CXXDeclarativeRuller.new(args)
 		defines = {otype = "array", default = {}},
 		depends = { merge = optops.f_changeMerge, otype = "array", include = optops.f_concatMerge, add = optops.f_concatMerge},
 		libs = {otype = "array", default = {}},
-		modules = {otype = "array"},
-		includeModules = {otype = "array"},
+		modules = {otype = "array", merge = f_changeMerge},
+		includeModules = {otype = "array", merge = f_changeMerge},
 		
 		optimization = {otype = "string"},
 		builddir = {otype = "string"},
@@ -48,10 +49,10 @@ function CXXDeclarativeRuller.new(args)
 		}},
 	
 		flags = {otype = "table", table = {
-			cc = {otype = "array", merge = optops.f_changeWeakMerge, },
-			cxx = {otype = "array", merge = optops.f_changeWeakMerge,},
-			ld = {otype = "array", merge = optops.f_changeWeakMerge,},
-			allcc = {otype = "array", merge = optops.f_changeWeakMerge,}		
+			cc = {otype = "array", merge = optops.f_changeWeakMerge, include = optops.f_concatMerge },
+			cxx = {otype = "array", merge = optops.f_changeWeakMerge, include = optops.f_concatMerge},
+			ld = {otype = "array", merge = optops.f_changeWeakMerge, include = optops.f_concatMerge},
+			allcc = {otype = "array", merge = optops.f_changeWeakMerge, include = optops.f_concatMerge}		
 		}}
 	}
 

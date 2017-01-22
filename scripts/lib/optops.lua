@@ -122,8 +122,15 @@ function optops.restorePaths(tbl, meta, basedir)
 			optops.restorePaths(tbl[key], proto.table, basedir)
 		else
 			if proto.paths and tbl[key] then	
+				local localbasedir = basedir
+				if (type(proto.paths) == "string") then
+					dirkey = proto.paths
+					if tbl[dirkey] then
+						localbasedir = pathops.resolve(basedir, tbl[dirkey])
+					end
+				end 
 				for index, path in ipairs(tbl[key]) do
-					tbl[key][index] = pathops.isAbsolute(path) and path or pathops.resolve(basedir, path)
+					tbl[key][index] = pathops.isAbsolute(path) and path or pathops.resolve(localbasedir, path)
 				end
 			end
 		end
