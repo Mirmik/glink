@@ -17,7 +17,8 @@ function CXXDeclarativeRuller.new(args)
 		buildutils = {otype = "table", table = {
 			CC = { otype = "string", merge = optops.f_nilMerge },
 			CXX = { otype = "string", merge = optops.f_nilMerge },
-			LD = { otype = "string", merge = optops.f_nilMerge }		
+			LD = { otype = "string", merge = optops.f_nilMerge },		
+			AR = { otype = "string", merge = optops.f_nilMerge }
 		}},
 	
 		sources = {otype = "table", table = {
@@ -34,6 +35,8 @@ function CXXDeclarativeRuller.new(args)
 		libs = {otype = "array", default = {}},
 		modules = {otype = "array", merge = f_changeMerge},
 		includeModules = {otype = "array", merge = f_changeMerge},
+		optdict = {otype = "array", merge = f_changeMerge},
+		options = {otype = "array", merge = f_changeMerge},
 		
 		optimization = {otype = "string"},
 		builddir = {otype = "string"},
@@ -64,14 +67,15 @@ function CXXDeclarativeRuller.new(args)
 
 	--Compiler rules prototypes.
 	ruller.rules = ruleops.substitute({
-		cxx_rule = "%CXX% -c %src% -o %tgt% %__options__%",
-		cc_rule = "%CC% -c %src% -o %tgt% %__options__%",
-		s_rule = "%CC% -c %src% -o %tgt% %__options__%",
+		cxx_rule = "%CXX% -o %tgt% -c %src% %__options__%",
+		cc_rule = "%CC% -o %tgt% -c %src% %__options__%",
+		s_rule = "%CC% -o %tgt% -c %src% %__options__%",
 		cxx_dep_rule = "%CXX% -MM %src% > %tgt% %__options__%",
 		cc_dep_rule = "%CC% -MM %src% > %tgt% %__options__%",
 		s_dep_rule = "%CC% -MM %src% > %tgt% %__options__%",
-		ld_rule = "%CXX% %objs% -o %tgt% %__options__%",
-		__options__ = "%STANDART% %OPTIMIZATION% %DEFINES% %INCLUDE% %OPTIONS%",
+		ar_rule = "%AR% rcs %tgt% %objs%",
+		ld_rule = "%CXX% -o %tgt% %objs% %__options__%",
+		__options__ = "%STANDART% %OPTIMIZATION% %DEFINES% %GOPTIONS% %INCLUDE% %OPTIONS%",
 		
 		fortran_rule = "%FORTRAN% -cpp -c %src% -o %tgt% %__fortran_options__%",
 		fortran_dep_rule = "%FORTRAN% -cpp -MM %src% > %tgt% %__fortran_options__%",
@@ -228,6 +232,37 @@ function CXXDeclarativeRuller:linkTask(taskTree, mod, parts, need)
 	return {target} 
 end
 
+function CXXDeclarativeRuller:linkStaticLibraryTask(taskTree, mod, parts, need)
+	local target = mod.__opts.target and mod.__opts.target or mod.name
+	local targetdir = mod.__opts.targetdir and mod.__opts.targetdir or mod.__opts.builddir
+	local message
+	target = pathops.resolve(targetdir, target)
+	
+	local ar_rule = mod.__odRules.ar_rule
+	ar_rule = ruleops.substitute(ar_rule, { objs = table.concat(parts, " "), tgt = target })
+	
+	if #parts == 0 then return {} end
+
+	if self.info == "debug" then 
+		message = "LINKSTATIC " .. ar_rule .. "\r\n"
+	elseif self.info == "silent" then
+	else
+		message = "LINKSTATIC " .. target
+	end
+
+	taskTree:addTask(target, {
+		{
+			rule = ar_rule,
+			echo = false, message = message, noneed = not (need or needops.needToUpdateFile(target))
+		}
+	})
+
+	taskTree:multiBasesNext(parts, target)
+	taskTree:addNext(targetdir, target)
+			
+	return {target} 
+end
+
 function CXXDeclarativeRuller:buildDirectoryDeleteTask(taskTree, mod)
 	local builddir = mod.__opts.builddir
 	local message
@@ -260,12 +295,17 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 			util.map(opts.defines, function(file) return "-D" .. file end), 
 			" "
 		),
+		GOPTIONS = table.concat(	
+			util.mapdict(opts.options, function(key,value) 
+				return "-D__option" .. key .. "=" .. value end), 
+			" "
+		),
 		INCLUDE = table.concat(
 			util.map(opts.includePaths, function(file) return "-I" .. file end), 
 			" "
 		),
 	})
-
+	
 	local cc_options = ruleops.substitute(tempoptions, {
 		STANDART = opts.standart.cc,
 		OPTIONS = table.concat(table.arrayConcat(opts.flags.cc, opts.flags.allcc)," "),
@@ -283,6 +323,9 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 		),
 	})
 
+	if opts.assembletype == "dynamic" then SHARED = "-shared"
+	else  SHARED = "" end
+	
 	local ld_options = ruleops.substitute(protorules.__link_options__, {
 		OPTIMIZATION = opts.optimization,
 		LIBS = table.concat(util.map(opts.libs, function(file) return "-l" .. file end), 
@@ -292,11 +335,8 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 			" "
 		),
 		OPTIONS = table.concat(table.arrayConcat(opts.flags.ld, opts.flags.allcc)," "),
-		SHARED = ""
+		SHARED = SHARED
 	})
-	if opts.assembletype == "static" then SHARED = "-static" end 
-	if opts.assembletype == "dynamic" then SHARED = "-shared" end 
-	
 
 	local ret = {};
 	ret.cc_rule = ruleops.substitute(protorules.cc_rule, {__options__= cc_options});
@@ -306,6 +346,7 @@ function CXXDeclarativeRuller:resolveODRule(protorules, opts)
 	ret.fortran_rule = ruleops.substitute(protorules.fortran_rule, {__fortran_options__= fortran_options});
 	ret.fortran_dep_rule = ruleops.substitute(protorules.fortran_dep_rule, {__fortran_options__= fortran_options});
 	ret.ld_rule = ruleops.substitute(protorules.ld_rule, {__options__= ld_options});
+	ret.ar_rule = protorules.ar_rule;
 	
 	return ret;
 end
@@ -341,12 +382,39 @@ function CXXDeclarativeRuller:resolveIncludeModules(mod)
 	mod.mod.includeModules = nil;
 end
 
+function CXXDeclarativeRuller:checkup(modulelist) 
+	for key, mod in pairs(modulelist) do
+		if mod.__opts.optdict then
+			for index, value in pairs(mod.__opts.optdict) do
+				if mod.__opts.options[value] == nil then
+					error("need options")
+				end
+			end
+		end
+
+		if mod.__opts.depends then
+			for key, value in pairs(mod.__opts.depends) do
+				if modulelist[value] == nil then
+					error("need module " .. value)
+				end
+			end
+		end
+	end
+end
+
 function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts) 
 	optops.prepare(addopts, self.optionsTable)
+
+	local modulelist = {}
 
 	local function f(mod, addopts, rootopts)
 		--get module from library.
 		local _opts = table.deep_copy(rootopts)
+
+		if modulelist[mod.name] ~= nil then
+			error("DOOBLE MODULE")
+		end 
+		modulelist[mod.name] = mod 
 
 		--resolve module opts
 		optops.prepare(mod.mod, self.optionsTable)
@@ -381,6 +449,7 @@ function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts)
 	end
 
 	f(rootmod, addopts, self.opts) 
+	return modulelist
 end
 
 function CXXDeclarativeRuller:makeCleanTaskTree(taskTree, mod) 
@@ -419,18 +488,21 @@ function CXXDeclarativeRuller:makeAssembleTaskTree(taskTree, mod)
 
 		objects, needobj = self:objectTasks(taskTree, mod)
 		need = needobj or needres		
-		
+		local parts = table.arrayConcat(objects, results)
+			
 		if mod.__opts.assembletype == "objects" then 
-			return table.arrayConcat(objects, results), need
+			return parts, need
 		
 		elseif 	mod.__opts.assembletype == "application" or 
-				mod.__opts.assembletype == "static" or 
 				mod.__opts.assembletype == "dynamic" then 
-			local parts = table.arrayConcat(objects, results)
-			if not mod.__opts.targetdir then error(text.red("targetdir should be declared")) end
+			if not mod.__opts.targetdir then mod.__opts.targetdir = mod.__opts.builddir end
 			self:updateDirectoryTask(taskTree, mod.__opts.targetdir)
 			return self:linkTask(taskTree, mod, parts, need), need
-		else
+		elseif mod.__opts.assembletype == "static" then
+			if not mod.__opts.targetdir then mod.__opts.targetdir = mod.__opts.builddir end
+			self:updateDirectoryTask(taskTree, mod.__opts.targetdir)
+			return self:linkStaticLibraryTask(taskTree, mod, parts, need), need
+		else			
 			error("unresolved type of assemble")
 		end
 	end
@@ -441,8 +513,9 @@ end
 
 function CXXDeclarativeRuller:makeTaskTree(name, addops) 
 	local mod = self.mlib:getModule(name)
-	self:prepareModuleTree(mod, addops)
-
+	local modulelist = self:prepareModuleTree(mod, addops)
+	self:checkup(modulelist)
+	
 	local taskTree = TaskTree.new()
 
 	if self.clean == true then

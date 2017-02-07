@@ -131,10 +131,23 @@ end
 util = {}
 function util.map(array, func)
 	local outarray = {}
+    if array == nil then return {} end
 	for i = 1, #array do
 		outarray[i] = func(array[i])
 	end
 	return outarray
+end
+
+function util.mapdict(array, func)
+    local outarray = {}
+    local i = 1
+    if array == nil then return {} end
+    for key,value in pairs(array) do
+        outarray[i] = func(key,value)
+        i = i + 1
+    end
+    
+    return outarray
 end
 
 -- Lua 5.1+ base64 v3.0 (c) 2009 by Alex Kloss <alexthkloss@web.de>

@@ -36,11 +36,7 @@ function TaskTree:addTask(target, rulelist)
 	self.tasksTotal = self.tasksTotal + 1
 end
 
-function TaskTree:contains(target)
-	return self.tasks[target] and true or false
-end
-
-function TaskTree:countReference()
+function TaskTree:__countReference()
 	for target, task in pairs(self.tasks) do
 		task.totalReference = 0
 		task.rcounter = 0
@@ -57,7 +53,7 @@ function TaskTree:countReference()
 	end
 end
 
-function TaskTree:startArrayPrepare()
+function TaskTree:__startArrayPrepare()
 	self.works = {}
 	for target, task in pairs(self.tasks) do
 		if task.totalReference == 0 then
@@ -67,8 +63,8 @@ function TaskTree:startArrayPrepare()
 end
 
 function TaskTree:prepare()
-	self:countReference()
-	self:startArrayPrepare()
+	self:__countReference()
+	self:__startArrayPrepare()
 	self.windex = 0
 end
 
@@ -101,6 +97,10 @@ function TaskTree:printWorks()
 	end
 end
 
+function TaskTree:contains(target)
+	return self.tasks[target] and true or false
+end
+
 function TaskTree:workIterator() 
 	return function ()
 		self.windex = self.windex + 1
@@ -113,6 +113,10 @@ function TaskTree:workIterator()
 		end 
 		return self.works[self.windex]
 	end
+end
+
+function TaskTree:haveWork() 
+	return self.works[1] ~= nil
 end
 
 function TaskTree:finalWork(work) 

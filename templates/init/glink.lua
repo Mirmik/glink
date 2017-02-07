@@ -1,14 +1,27 @@
 ruller = CXXDeclarativeRuller.new{
-	buildutils = { 
+		buildutils = { 
 		CXX = "g++", 
 		CC = "gcc", 
-		LD = "ld", 
+		LD = "ld",  
+	},
+	--weakRecompile = "noscript",
+	optimization = "-O2",
+	standart = {
+		cxx = "-std=gnu++14",
+		cc = "-std=gnu11",
+	},
+	flags = {
+		cc = "",
+		cxx = "",
+		ld = "",
+		allcc = "-Wl,--gc-sections -fdata-sections -ffunction-sections"
 	},
 	builddir = "./build",
 }
 
 Module("main", {
 	sources = {
+		cxx = "main.cpp"
 	},
 })
 
