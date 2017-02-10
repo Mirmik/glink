@@ -76,6 +76,7 @@ function string:split(sep)
 end
 
 function table.arrayConcat(a,b,...)
+    local arg={...}
 	local c = {}
 	local cindex = 1
 	for aindex = 1, #a do c[cindex] = a[aindex]; cindex = cindex + 1 end
@@ -83,6 +84,7 @@ function table.arrayConcat(a,b,...)
     for i,v in ipairs(arg) do
         for j = 1, #v do c[cindex] = v[j]; cindex = cindex + 1 end
     end
+    
 	return c
 end
 
