@@ -10,7 +10,7 @@ ruller = CXXDeclarativeRuller.new{
 	optimization = "-O2",
 	
 	standart = {
-		cxx = "-std=gnu++11",
+		cxx = "-std=gnu++14",
 		cc = "-std=gnu11",
 	},
 	

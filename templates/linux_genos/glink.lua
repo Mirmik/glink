@@ -33,16 +33,18 @@ Module("main", {
 		{name = "genos.dprint", impl = "diag"},
 		{name = "genos.diag", impl = "impl"},
 		{name = "genos.arch.linux32"},
+		{name = "genos.board.noboard"},
 	},
 
 	includeModules = {
 		{name = "genos.include"},
 		{name = "genos.include.arch.linux32"},
+		{name = "genos.include.board.noboard"},
 	},
 })
 
 local ret = ruller:standartAssemble("main", {
-	target = "genos",
+	target = "target",
 	targetdir = ".",
 	assembletype = "application"
 })
