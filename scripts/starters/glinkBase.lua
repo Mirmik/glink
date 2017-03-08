@@ -12,6 +12,10 @@ OPTS = getargs( arg, "j" )
 --print(table.tostring(OPTS))
 
 GlinkGlobal = require("glink.classes.GlinkGlobal")
+FaultError = GlinkGlobal.FaultError
+FaultErrorInOptions = GlinkGlobal.FaultErrorInOptions
+FaultErrorDeep = GlinkGlobal.FaultErrorDeep
+
 ScriptMachine = require("glink.classes.ScriptMachine")
 ModuleLibrary = require("glink.classes.ModuleLibrary")
 

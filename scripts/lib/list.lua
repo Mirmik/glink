@@ -53,6 +53,10 @@ function List:first()
 	return self.head.next.obj
 end
 
+function List:empty() 
+	return self.head == self.prev
+end
+
 function List:foreach()	
 	local next = self.head.next
 	local cur = self.head

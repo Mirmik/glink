@@ -7,7 +7,7 @@
 #include "lua.h"
 #include "lauxlib.h"
 
-static void stackDump(lua_State* L) {
+void stackDump(lua_State* L) {
 	int i;
 	printf("stack dump: ");
 	int top = lua_gettop(L);
@@ -196,8 +196,10 @@ int glink_parallel_tasks_execute(lua_State* L) {
 	return 1;
 }
 
+extern int straight_executor_parallel_tasks_execute(lua_State* L);
 static const struct luaL_Reg mirmik[] = {
 	{"parallel_tasks_execute", glink_parallel_tasks_execute},
+	{"straight_executor_parallel_tasks_execute", straight_executor_parallel_tasks_execute},
 	{NULL, NULL}
 };
 

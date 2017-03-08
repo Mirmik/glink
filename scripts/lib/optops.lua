@@ -17,12 +17,18 @@ function optops.f_changeMerge(old, new) return new end
 function optops.f_noMerge(old, new) return old end
 function optops.f_nilMerge(old, new) return nil end
 function optops.f_changeWeakMerge(old, new) return new and new or old end
-function optops.f_straightStringPrepare(inp) 
-	assert (type(inp) == "string") 
+
+function optops.f_straightStringPrepare(inp, key) 
+	if (type(inp) ~= "string") then FaultErrorDeep("optops.f_straightStringPrepare", "wrong data " .. text.red(tostring(inp)) .. " key " .. text.red(key), 4) end
 	return inp 
 end
 
-function optops.f_stringToArrayPrepare(inp) 
+function optops.f_straightNumberPrepare(inp, key) 
+	if (type(inp) ~= "number") then FaultErrorDeep("optops.f_straightNumberPrepare", "wrong data " .. text.red(tostring(inp)) .. " key " .. text.red(key), 4) end
+	return inp 
+end
+
+function optops.f_stringToArrayPrepare(inp, key) 
 	assert (type(inp) == "string" or type(inp) == "table") 
 	if type(inp) == "string" then
 		return string.split(inp, ' ')
@@ -36,7 +42,7 @@ function optops.f_concatMerge(old, new)
 	return table.arrayConcat(old, new)
 end
 
-function optops.prepareMetaTable(opttable) 
+function optops.prepareMetaTable(opttable, key) 
 	for key, opt in pairs(opttable) do
 		if opt.otype == "string" then
 			optops.default(opt, {
@@ -44,6 +50,12 @@ function optops.prepareMetaTable(opttable)
 				prepare = optops.f_straightStringPrepare,
 			})
 		
+		elseif opt.otype == "number" then
+			optops.default(opt, {
+				merge = optops.f_changeWeakMerge,
+				prepare = optops.f_straightNumberPrepare,
+			})
+
 		elseif opt.otype == "table" then
 			optops.prepareMetaTable(opt.table)
 		
@@ -65,7 +77,7 @@ function optops.prepare(opts, metatbl)
 		for key, opt in pairs(opts) do
 			local proto = metatbl[key]
 			if proto == nil then
-				print("Wrong property name " .. text.red(key) .. " in " .. (opts.__name__ and text.red(opts.__name__) or "NOMODULE"))
+				FaultErrorInOptions(opts, "Wrong property name " .. text.red(key))
 				os.exit(-1)
 			end	
 		
@@ -76,7 +88,7 @@ function optops.prepare(opts, metatbl)
 				end	
 				step1(opt, proto.table)
 			else
-				opts[key] = proto.prepare(opt)
+				opts[key] = proto.prepare(opt, key)
 			end
 		end
 	end

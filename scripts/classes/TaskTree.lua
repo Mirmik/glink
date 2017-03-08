@@ -84,7 +84,10 @@ end
 function TaskTree:printTree() 
 	print("TaskTree")
 	for target, task in pairs(self.tasks) do
-		print(target, task.totalReference, task.rule)
+		print(target, task.totalReference)
+		for index, rule in ipairs(task.rulelist) do
+			print(rule.rule)
+		end
 	end
 end
 
@@ -116,7 +119,7 @@ function TaskTree:workIterator()
 end
 
 function TaskTree:haveWork() 
-	return self.works[1] ~= nil
+	return self.works[self.windex + 1] ~= nil
 end
 
 function TaskTree:finalWork(work) 

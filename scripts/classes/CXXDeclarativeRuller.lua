@@ -13,7 +13,9 @@ function CXXDeclarativeRuller.new(args)
 
 	--построение таблицы опций для optops
 	ruller.optionsTable = {
-		__name__ = {otype = "string"},
+		__name__ = {otype = "string", merge = optops.f_changeMerge, add = optops.f_noMerge, include = optops.f_noMerge},
+		__file__ = {otype = "string", merge = optops.f_changeMerge, add = optops.f_noMerge, include = optops.f_noMerge},
+		__line__ = {otype = "number", merge = optops.f_changeMerge, add = optops.f_noMerge, include = optops.f_noMerge},
 		buildutils = {otype = "table", table = {
 			CC = { otype = "string", merge = optops.f_nilMerge },
 			CXX = { otype = "string", merge = optops.f_nilMerge },
@@ -63,6 +65,11 @@ function CXXDeclarativeRuller.new(args)
 	optops.prepareMetaTable(ruller.optionsTable)
 
 	ruller.opts = table.deep_copy(args)
+
+	ruller.opts.__name__ = "rootopts"
+	ruller.opts.__file__ = debug.getinfo(2, "S").short_src
+	ruller.opts.__line__ = debug.getinfo(2, "l").currentline
+
 	optops.prepare(ruller.opts, ruller.optionsTable)
 
 	--Compiler rules prototypes.
@@ -387,7 +394,7 @@ function CXXDeclarativeRuller:checkup(modulelist)
 		if mod.__opts.optdict then
 			for index, value in pairs(mod.__opts.optdict) do
 				if mod.__opts.options[value] == nil then
-					error("need options")
+					FaultError("CXXDeclarativeRuller:checkup" ,"need options")
 				end
 			end
 		end
@@ -395,7 +402,7 @@ function CXXDeclarativeRuller:checkup(modulelist)
 		if mod.__opts.depends then
 			for key, value in pairs(mod.__opts.depends) do
 				if modulelist[value] == nil then
-					error("need module " .. value)
+					FaultError("CXXDeclarativeRuller:checkup" ,"need module " .. value)
 				end
 			end
 		end
@@ -412,7 +419,7 @@ function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts)
 		local _opts = table.deep_copy(rootopts)
 
 		if modulelist[mod.name] ~= nil then
-			error("DOOBLE MODULE")
+			FaultError("CXXDeclarativeRuller:prepareModuleTree" ,"DOOBLE MODULE")
 		end 
 		modulelist[mod.name] = mod 
 
@@ -438,6 +445,10 @@ function CXXDeclarativeRuller:prepareModuleTree(rootmod, addopts)
 			--get submodule from library
 			local sub = self.mlib:resolveSubmod(subrec);
 			subrec.opts = subrec.opts and subrec.opts or {}
+			
+			subrec.opts.__name__ = mod.__opts.__name__ .. " to " .. sub.name .. " addopts"
+			subrec.opts.__file__ = mod.__opts.__file__
+			subrec.opts.__line__ = mod.__opts.__line__
 			optops.prepare(subrec.opts, self.optionsTable)
 		
 			--use Worker on it.
@@ -513,6 +524,7 @@ end
 
 function CXXDeclarativeRuller:makeTaskTree(name, addops) 
 	local mod = self.mlib:getModule(name)
+
 	local modulelist = self:prepareModuleTree(mod, addops)
 	self:checkup(modulelist)
 	
@@ -528,6 +540,10 @@ function CXXDeclarativeRuller:makeTaskTree(name, addops)
 end
 
 function CXXDeclarativeRuller:standartAssemble( name, addopts )
+	addopts.__name__ = "root to " .. name .. " addopts"
+	addopts.__file__ = debug.getinfo(2, "S").short_src
+	addopts.__line__ = debug.getinfo(2, "l").currentline
+
 	self:useOPTS(_ENV.OPTS)
 	local executor = StraightExecutor.new()
 	executor:useOPTS(_ENV.OPTS)

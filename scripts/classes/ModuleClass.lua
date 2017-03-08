@@ -8,7 +8,11 @@ function ModuleClass:new(name, mod)
 	Mod.name = name
 	Mod.mod = mod	
 	Mod.type = "simple" 
+
+	info = debug.getinfo(3)
 	Mod.mod.__name__ = name
+	Mod.mod.__line__ = info.currentline
+	Mod.mod.__file__ = info.short_src
 
 	return Mod
 end
