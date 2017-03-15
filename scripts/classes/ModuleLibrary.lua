@@ -114,7 +114,7 @@ function ModuleLibrary:getRealModuleRecord(name,impl)
 	
 	local ret;
 	if (getmetatable(mod) == ModuleClass) then
-		if (impl) then error FaultError("ModuleLibrary", "module " .. name .. " don't have implementation") end
+		if (impl) then FaultError("ModuleLibrary", "module " .. name .. " don't have implementation") end
 		return mod;
 	end
 
