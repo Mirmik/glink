@@ -119,9 +119,9 @@ function ModuleLibrary:getRealModuleRecord(name,impl)
 	end
 
 	if (getmetatable(mod) == VariantModuleClass) then
-		if (impl == nil) then error "This module need to implementation" end
+		if (impl == nil) then FaultError("ModuleLibrary", "module " .. name .. " need implementation") end
 		ret = mod:getImplementation(impl);
-		if (ret == nil) then error "Implementation is not released" end
+		if (ret == nil) then FaultError("Implementation " .. impl .. " for module " .. name .. " is not released") end
 		return ret; 
 	end
 end
