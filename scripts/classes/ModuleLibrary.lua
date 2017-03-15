@@ -114,14 +114,14 @@ function ModuleLibrary:getRealModuleRecord(name,impl)
 	
 	local ret;
 	if (getmetatable(mod) == ModuleClass) then
-		if (impl) then error "This module dont have implementations" end
+		if (impl) then error FaultError("ModuleLibrary", "module " .. name .. " don't have implementation") end
 		return mod;
 	end
 
 	if (getmetatable(mod) == VariantModuleClass) then
 		if (impl == nil) then FaultError("ModuleLibrary", "module " .. name .. " need implementation") end
 		ret = mod:getImplementation(impl);
-		if (ret == nil) then FaultError("Implementation " .. impl .. " for module " .. name .. " is not released") end
+		if (ret == nil) then FaultError("ModuleLibrary", "Implementation " .. impl .. " for module " .. name .. " is not released") end
 		return ret; 
 	end
 end
