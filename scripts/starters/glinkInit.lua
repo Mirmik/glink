@@ -52,4 +52,13 @@ if (OPTS.template) then
 	end
 end
 
+
+if (OPTS.list) then 
+	local at = function(str,i) return str:sub(i,i) end
+	local templatedir = __directory .. "/templates"
+	for file in lfs.dir(templatedir) do
+		if at(file,1) ~= "." then print(file) end
+	end
+end
+
 os.exit(1)
