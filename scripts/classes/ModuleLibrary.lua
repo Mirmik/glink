@@ -132,7 +132,7 @@ function ModuleLibrary:moduleCopy(original)
 end
 
 function ModuleLibrary:resolveSubmod(sub)
-	assert(sub.name, "resolveSubmod1")
+	assert(sub.name, "submodule should have field \"name\"")
 	
 	local mod = self:getRealModule(sub.name, sub.impl)
 	
