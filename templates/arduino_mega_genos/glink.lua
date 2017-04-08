@@ -10,7 +10,7 @@ ruller = CXXDeclarativeRuller.new{
 		LD = "avr-ld", 
 	},
 	--weakRecompile = "noscript",
-	optimization = "-O2",
+	optimization = "-Os",
 	
 	standart = {
 		cxx = "-std=gnu++14",
@@ -45,10 +45,18 @@ Module("main", {
 		{name = "genos.arch.atmega2560"},
 		{name = "genos.board.arduino_mega"},
 
-		{name = "genos.fs.chardev", impl = "cxx"},
+		--{name = "genos.fs.chardev", impl = "cxx"},
 		{name = "genos.arch.atmega2560.drivers.usart", impl = "cxx"},
 
 		{name = "genos.libc"},
+
+		{name = "placenew"},
+		{name = "genos.lin_malloc"},
+		{name = "genos.kernel.ipcstack"},
+
+		{name = "genos.kernel.scheduler", impl = "standart"},
+		{name = "genos.csection"},
+		{name = "genos.kernel.standart_glue"},
 	},
 
 	includeModules = {

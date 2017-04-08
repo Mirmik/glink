@@ -1,33 +1,64 @@
-#include <hal/arch.h>
-#include <drivers/gpio.h>
-
-#include <drivers/serial/avr/UsartDevice.h>
+#include <hal/board.h>
 #include <debug/dprint.h>
-#include <debug/delay.h>
+#include <drivers/gpiotbl.h>
 
-gxx::array<char, 128> txbuf, rxbuf;
-UsartDevice usart0(usart0_data, txbuf, rxbuf);
+#include <gxx/array.h>
+#include <genos/banner.h>
 
-void setup();
-void loop();
+#include <console/Terminal.h>
+#include <kernel/devices/serial/Stream.h>
+#include <kernel/devices/serial/PipeStream.h>
+
+#include <drivers/serial/avr/UsartStream.h>
+
+#include <console/SimpleShell.h>
+
+//Genos::DebugExecutor debugExecutor;
+Genos::SimpleShell shell; 
+
+//Genos::DebugStream debugStream;
+//Genos::PipeStream pipeStream((new gxx::array<char, 256>)->slice());
+
+gxx::array<char, 256> rxbuf, txbuf;
+
+Genos::AvrUsartStream io(usart0_data, rxbuf.slice(), txbuf.slice());
+Genos::Terminal terminal(&io, &io, &shell, (new gxx::array<char, 64>)->slice());
+
+int hello(int argc, char** argv) {
+	dprln("HelloWorld");
+	return Genos::SimpleShell::RetCodeOK;
+}
+
+int ledon(int argc, char** argv) {
+	pinnum_set_level(13,1);
+	return Genos::SimpleShell::RetCodeOK;
+}
+
+int ledoff(int argc, char** argv) {
+	pinnum_set_level(13,0);
+	return Genos::SimpleShell::RetCodeOK;
+}
 
 int main() {
-	arch_init();
+	board_init();
 
-	setup();
+	debug_print("HELLOWORLD");
+
+	io.begin(115200);
 	global_irq_enable();
-	while(1) loop();
-}
 
-void setup() {
-	gpio_settings(GPIOB, (1<<7), GPIO_MODE_OUTPUT);
-	gpio_set_level(GPIOB, (1<<7), 1);
-	
-	usart0.begin(115200);
-}
+	//debugStream.println("HelloWorld");
+	print_banner(io);
+	print_about(io);
 
-void loop() {
-	debug_delay(1000);
-	usart0.println("HelloWorld");
-	gpio_tgl_level(GPIOB, (1<<7));
+	shell.add("hello", hello);
+	shell.add("on", ledon);
+	shell.add("off", ledoff);
+
+	//terminal.debug_mode = true;
+	terminal.echo(true).run();
+
+	while(1) {
+		Genos::Glue::schedule();
+	}
 }
