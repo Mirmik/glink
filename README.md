@@ -26,8 +26,6 @@ QUICK START
 
 WHAT's NEXT
 -----------
-
-I don't know...
-
+GitPage: [https:///mirmik.github.io/glink](https:///mirmik.github.io/glink)
 
 From Mirmik
