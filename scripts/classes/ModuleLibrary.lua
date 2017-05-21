@@ -119,7 +119,15 @@ function ModuleLibrary:getRealModuleRecord(name,impl)
 	end
 
 	if (getmetatable(mod) == VariantModuleClass) then
-		if (impl == nil) then FaultError("ModuleLibrary", "module " .. name .. " need implementation") end
+		if (impl == nil) then 
+			local implsString = ""
+			for k, v in pairs(mod.implementations) do
+				implsString = implsString .. text.yellow(k) .. "\n"
+			end
+			FaultError("ModuleLibrary", "module " .. text.yellow(name) .. " need implementation. \n" ..
+				"Registered implementations: \n" .. implsString) 
+		end
+		
 		ret = mod:getImplementation(impl);
 		if (ret == nil) then FaultError("ModuleLibrary", "Implementation " .. impl .. " for module " .. name .. " is not released") end
 		return ret; 
