@@ -5,7 +5,6 @@ local find = {}
 
 function find.findInTree(root, pattern, hide)
 	local result = {}
-	
 	local function recursiveFind(dir, pattern, hide) 
 		local files = {}
 		local dirs = {}

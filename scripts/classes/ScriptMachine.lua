@@ -29,7 +29,9 @@ function ScriptMachine:__evalFile(path, context)
 	local oldFileName = self.currentFile;
 	local oldDirName = self.currentDir;
 
-	local resolve = pathops.resolve(self.currentDir, path)
+	local resolve = pathops.isAbsolute(path) and 
+		pathops.resolve(self.currentDir, path) or 
+		path
 	
 	local file = File:new(resolve)
 	if (not file.exists) then
