@@ -120,6 +120,8 @@ function StraightExecutor:CheckWork(workerindex, twork)
 end
 
 function StraightExecutor:executeParallel(tree) 
+	--tree:printTree()
+
 	self.need = false
 	--self.tworks = {}
 	---self.tree = tree

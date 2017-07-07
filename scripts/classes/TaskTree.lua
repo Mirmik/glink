@@ -1,3 +1,34 @@
+--[[
+
+Класс TaskTree. Описывает набор заданий, требуемых к выполнению внешними утилитами.
+Класс содержит хэш тасков, каждый из которых представлиет собой линейный список заданий.
+Таски через поле next указывают на зависящие от них объекты (внимание, тут инверсия от классической схемы).
+Перед выполнением дерева заданий количество баз для каждого объекта подсчитывается и объект не будет
+выполнен ранее, чем будут выполнены все его базы.
+
+Поля:
+	tasksTotal - количество тасков.
+	tasks - хеш тасков. Ключом хема является "таргет", то есть объявленная цель операции 
+	(Это не обязательно должно быть имя файла)
+
+Структура таска:
+	rulelist - массив операций, требуемых к выполнению.
+	target - объявленная цель.
+	next - массив целей, завясищих от данной.
+
+	При операции prepare (TODO: Использовать для рантайм переменных декоратор).
+	totalReference - количество баз у данного таска.
+	rcounter - количество выполненных баз (для выполнения в скрипте).
+
+Структура записи операции (содержимое rulelist):
+	rule - исполняемый bash скрипт
+	noneed - булевое значение, устанавливаемое, если цель не требует выполнения.
+	echo - булевое значение, устанавливающее вывод текста скрипта на консоль
+	message - строка, выводимая на печать при выполнении скрипта.
+
+
+--]]
+
 local TaskTree = {}
 
 local TaskStruct = require("glink.classes.TaskStruct")
@@ -34,6 +65,7 @@ function TaskTree:addTask(target, rulelist)
 
 	self.tasks[target] = TaskStruct.new(target, rulelist)
 	self.tasksTotal = self.tasksTotal + 1
+
 end
 
 function TaskTree:__countReference()
@@ -83,6 +115,9 @@ end
 
 function TaskTree:printTree() 
 	print("TaskTree")
+
+	print(table.tostring(self))
+
 	for target, task in pairs(self.tasks) do
 		print(target, task.totalReference)
 		for index, rule in ipairs(task.rulelist) do

@@ -10,6 +10,7 @@ function needops.needToRecompile(objpath, deppath, modmtime, weak)
 	if objfile.exists == false then return true end 
 	if depfile.exists == false then return true end 
 	if weak == "norecompile" then return false end
+	if weak == "always" then return true end
 
 	local file = assert(io.open(depfile.path, "r"))
 	local deptext = file:read("*a")
