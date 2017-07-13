@@ -1,5 +1,3 @@
-local pathops = require("glink.lib.pathops")
-
 function table.val_to_str ( v )
 	if "string" == type( v ) then
 	v = string.gsub( v, "\n", "\\n" )

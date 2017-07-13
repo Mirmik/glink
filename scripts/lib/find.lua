@@ -1,9 +1,11 @@
 local lfs = require("lfs")   
-local pathops = require("glink.lib.pathops")
+--local pathops = require("glink.lib.pathops")
+local plpath = require("pl.path")
 
 local find = {}
 
-function find.findInTree(root, pattern, hide)
+function find.findInTree(root, pattern, hide, base)
+	if base == nil then base = "." end 
 	local result = {}
 	local function recursiveFind(dir, pattern, hide) 
 		local files = {}
@@ -12,10 +14,11 @@ function find.findInTree(root, pattern, hide)
 		for file in lfs.dir(dir) do
 			if ((not (file == ".")) and (not (file == ".."))) then
 				if (not file:match(hide)) then
-					local path = pathops.resolve(dir,file)
+					local path = plpath.join(dir,file)
 					local attrib = lfs.attributes(path)
 					if (attrib.mode == "file") then 
-						if file:match(pattern) then result[#result + 1] = path end 
+						--print(pl.path.relpath(path, base))
+						if file:match(pattern) then result[#result + 1] = plpath.abspath(path) end 
 					end
 					if (attrib.mode == "directory") then 
 						recursiveFind(path, pattern, hide)
@@ -26,6 +29,8 @@ function find.findInTree(root, pattern, hide)
 	end
 
 	recursiveFind(root,pattern,hide)
+	--print(table.tostring(result))
+	--while(1) do end
 	return result 
 end
 

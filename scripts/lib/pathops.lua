@@ -1,8 +1,9 @@
 local pathops = {}
+local os = require("os")
 
 local at = function(str,i) return str:sub(i,i) end
 
-function pathops.simplify(P) 
+--[[function pathops.simplify(P) 
     assert(type(P) == "string")
 
     -- Split path into anchor and relative path.
@@ -52,5 +53,14 @@ end
 function pathops.isAbsolute(path)
     return at(path, 1) == '/'
 end
+
+--- return an absolute path.
+-- @string P A file path
+-- @string[opt] pwd optional start path to use (default is current dir)
+function pathops.abspath(base,file)
+    if base == nil then base = os.pwd() end
+    ret = pathops.resolve(base, file)
+    return ret 
+end]]
 
 return pathops

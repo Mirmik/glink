@@ -1,4 +1,4 @@
-local pathops = require("glink.lib.pathops")
+local plpath = require("pl.path")
 local text = require("glink.lib.text")
 
 local ScriptMachine = {}
@@ -29,10 +29,11 @@ function ScriptMachine:__evalFile(path, context)
 	local oldFileName = self.currentFile;
 	local oldDirName = self.currentDir;
 
-	local resolve = pathops.isAbsolute(path) and 
-		pathops.resolve(self.currentDir, path) or 
+	local resolve = plpath.isabs(path) and 
+		plpath.join(self.currentDir, path) or 
 		path
-	
+	--print(resolve)
+
 	local file = File:new(resolve)
 	if (not file.exists) then
 		print("File " .. file.path .. " is not exists")
@@ -46,7 +47,7 @@ function ScriptMachine:__evalFile(path, context)
 	if (file.mtime > self.mtime) then self.mtime = file.mtime end
 
 	self.currentFile = resolve;
-	self.currentDir = pathops.dirname(resolve);
+	self.currentDir = plpath.dirname(resolve);
 
 	-- load and run a script in the provided environment
 	self:run(resolve, context) 

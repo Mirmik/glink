@@ -52,7 +52,7 @@ script:evalFile("./glink.lua", {
 	TaskStruct = require("glink.classes.TaskStruct"),
 	StraightExecutor = require("glink.classes.StraightExecutor"),
 
-	pathops = require("glink.lib.pathops"),
+	plpath = require("pl.path"),
 	ruleops = require("glink.lib.ruleops"),
 	text = require("glink.lib.text"),
 	find = require("glink.lib.find"),

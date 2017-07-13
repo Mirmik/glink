@@ -1,6 +1,6 @@
 --local File = dofile(__directory .. "/classes/File.lua")
 local lfs = require("lfs");
-local pathops = require("glink.lib.pathops")
+--local pathops = require("glink.lib.pathops")
 
 local FileCache = {}
 FileCache.__index = FileCache

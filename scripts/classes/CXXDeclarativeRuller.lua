@@ -212,7 +212,7 @@ function CXXDeclarativeRuller:linkTask(taskTree, mod, parts, need)
 	local target = mod.__opts.target and mod.__opts.target or mod.name
 	local targetdir = mod.__opts.targetdir and mod.__opts.targetdir or mod.__opts.builddir
 	local message
-	target = pathops.resolve(targetdir, target)
+	target = plpath.join(targetdir, target)
 	
 	local ld_rule = mod.__odRules.ld_rule
 	ld_rule = ruleops.substitute(ld_rule, { objs = table.concat(parts, " "), tgt = target })

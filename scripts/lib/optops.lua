@@ -1,9 +1,10 @@
 -- Операции над опциями модулей.
 
 optops = {}
+plpath = require("pl.path")
 
 text = require("glink.lib.text")
-pathops = require("glink.lib.pathops")
+--pathops = require("glink.lib.pathops")
 
 function optops.default(opt, dtbl)
 	for key, property in pairs(dtbl) do
@@ -138,11 +139,11 @@ function optops.restorePaths(tbl, meta, basedir)
 				if (type(proto.paths) == "string") then
 					dirkey = proto.paths
 					if tbl[dirkey] then
-						localbasedir = pathops.resolve(basedir, tbl[dirkey])
+						localbasedir = plpath.join(basedir, tbl[dirkey])
 					end
 				end 
 				for index, path in ipairs(tbl[key]) do
-					tbl[key][index] = pathops.isAbsolute(path) and path or pathops.resolve(localbasedir, path)
+					tbl[key][index] = plpath.isabs(path) and path or plpath.join(localbasedir, path)
 				end
 			end
 		end
